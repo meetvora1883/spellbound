@@ -1,0 +1,37 @@
+{
+  "name": "warboard-bot",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "nodemon index.js",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^9.0.0",
+    "chalk": "^4.1.2",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "discord.js": "^14.26.3",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "ffmpeg-static": "^5.2.0",
+    "googleapis": "^144.0.0",
+    "i18next": "^23.11.0",
+    "i18next-fs-backend": "^2.3.1",
+    "i18next-http-middleware": "^3.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "luxon": "^3.4.4",
+    "node-cron": "^3.0.3",
+    "shoukaku": "^4.0.0",
+    "socket.io": "^4.7.2",
+    "spotify-uri": "^3.0.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.1"
+  }
+}

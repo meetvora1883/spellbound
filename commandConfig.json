@@ -1,0 +1,112 @@
+{
+  "ping": {
+    "globalCommand": true,
+    "adminOnly": false
+  },
+
+  
+  "access_grant": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+  "access_revoke": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+  "access_allowguild": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+  "access_denyguild": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+    
+    
+  "warboard_assign": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+  "warboard_send": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+  "warboard_remove": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+  "warboard_show": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+  "warboard_listdates": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+    "warboard_copy": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+    "warboard_link": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+
+   "dm_grant": { 
+    "globalCommand": false, 
+    "adminOnly": true
+  },
+  "dm_revoke": { 
+    "globalCommand": false, 
+    "adminOnly": true
+  },
+  "dm_list": { 
+    "globalCommand": false, 
+    "adminOnly": true
+  },
+  "send_individual": { 
+    "globalCommand": false,
+    "adminOnly": true
+  },
+ "send_role_dm_all": {
+    "globalCommand": false,
+    "adminOnly": true
+ },
+    "delete_all_dms": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+    
+    
+
+  "selfrole": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+
+  "greetings": {
+    "globalCommand": false,
+    "adminOnly": true
+  },
+    
+    
+     "might_report": {
+    "globalCommand": false,
+    "adminOnly": true
+     },
+    "might_setchannel": {
+    "globalCommand": false,
+    "adminOnly": true
+     },
+    "might_view": {
+    "globalCommand": false,
+    "adminOnly": true
+     },
+    
+    
+    "ticket": {
+    "globalCommand": false,
+    "adminOnly": true
+     }
+    
+}
