@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Players - Warboard</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { padding: 20px; background: #0b1736; color: white; font-family: system-ui; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .nav { display: flex; gap: 16px; margin-bottom: 20px; align-items: center; }
+    .nav a { color: #5b6bff; text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,.06); border-radius: 8px; overflow: hidden; margin-top: 20px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.1); }
+    th { background: rgba(255,255,255,.1); }
+    input, select { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.2); color: white; padding: 8px; border-radius: 4px; }
+    button { background: #5b6bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+    button.danger { background: #dc3545; }
+    .form-row { margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .error-message { background: rgba(255,0,0,0.2); border: 1px solid red; padding: 10px; border-radius: 8px; margin: 10px 0; color: #ffaaaa; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <a href="/dashboard.html">← Servers</a>
+      <a href="/warboards.html">Warboards</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </div>
+    <h1>Players</h1>
+
+    <div id="errorDisplay" class="error-message hidden"></div>
+
+    <div class="form-row">
+      <input type="text" id="newUserId" placeholder="Discord User ID" />
+      <input type="text" id="newUsername" placeholder="Username" />
+      <input type="number" id="newMight" placeholder="Might" step="0.001" />
+      <button id="addBtn">Add Player</button>
+    </div>
+
+    <table id="playersTable">
+      <thead>
+        <tr><th>ID</th><th>User ID</th><th>Username</th><th>Might</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="playersBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const socket = io();
+
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (res.status === 401) {
+        window.location.href = '/login.html';
+        return null;
+      }
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text}`);
+      }
+      return res.json();
+    }
+
+    function showError(msg) {
+      const errorDiv = document.getElementById('errorDisplay');
+      errorDiv.textContent = msg;
+      errorDiv.classList.remove('hidden');
+      console.error(msg);
+    }
+
+    let currentGuildId = localStorage.getItem('selectedGuildId');
+    if (!currentGuildId) {
+      alert('No server selected. Please select a server from the dashboard.');
+      window.location.href = '/dashboard.html';
+    }
+
+    async function loadPlayers() {
+      try {
+        const players = await apiFetch(`/api/players?guildId=${currentGuildId}`);
+        const tbody = document.getElementById('playersBody');
+        tbody.innerHTML = '';
+        players.forEach(p => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${p.id}</td>
+            <td>${p.user_id}</td>
+            <td><input type="text" class="editUsername" data-id="${p.id}" value="${p.username}" /></td>
+            <td><input type="number" step="0.001" class="editMight" data-id="${p.id}" value="${p.might}" /></td>
+            <td>
+              <button class="saveBtn" data-id="${p.id}">Save</button>
+              <button class="deleteBtn danger" data-id="${p.id}">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        document.querySelectorAll('.saveBtn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            const username = document.querySelector(`.editUsername[data-id="${id}"]`).value;
+            const might = document.querySelector(`.editMight[data-id="${id}"]`).value;
+            await apiFetch(`/api/players/${id}`, {
+              method: 'PUT',
+              body: JSON.stringify({ guildId: currentGuildId, username, might })
+            });
+            loadPlayers();
+          });
+        });
+        document.querySelectorAll('.deleteBtn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            if (!confirm('Delete player?')) return;
+            await apiFetch(`/api/players/${id}`, {
+              method: 'DELETE',
+              body: JSON.stringify({ guildId: currentGuildId })
+            });
+            loadPlayers();
+          });
+        });
+      } catch (err) {
+        showError('Failed to load players: ' + err.message);
+      }
+    }
+
+    document.getElementById('addBtn').addEventListener('click', async () => {
+      const userId = document.getElementById('newUserId').value;
+      const username = document.getElementById('newUsername').value;
+      const might = document.getElementById('newMight').value;
+      if (!userId || !username) return alert('User ID and username required');
+      await apiFetch('/api/players', {
+        method: 'POST',
+        body: JSON.stringify({ guildId: currentGuildId, userId, username, might })
+      });
+      document.getElementById('newUserId').value = '';
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newMight').value = '';
+      loadPlayers();
+    });
+
+    function logout() {
+      fetch('/auth/logout', { method: 'GET', credentials: 'include' }).then(() => window.location.href = '/login.html');
+    }
+
+    socket.on('playersUpdated', () => {
+      if (currentGuildId) loadPlayers();
+    });
+
+    loadPlayers();
+  </script>
+</body>
+</html>

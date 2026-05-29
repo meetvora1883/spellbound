@@ -1,0 +1,336 @@
+<div class="greetings-status-panel">
+  <style>
+    .greetings-status-panel {
+      padding: 0 0 20px 0;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .status-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .status-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .status-header i {
+      font-size: 1.2rem;
+    }
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .status-item:last-child {
+      border-bottom: none;
+    }
+    .status-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    .status-label .channel-badge {
+      background: rgba(91,107,255,0.2);
+      border: 1px solid rgba(91,107,255,0.5);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      color: #a5b4fc;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #4b5563;
+      transition: .2s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--good);
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    .switch.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .btn-save-all {
+      margin-top: 24px;
+      text-align: right;
+    }
+    .btn-save-all .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-save-all .btn i {
+      font-size: 1rem;
+    }
+    .btn-save-all .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+    .error-message {
+      color: #ff6b6b;
+      padding: 20px;
+      text-align: center;
+    }
+    .full-width {
+      grid-column: 1 / -1;
+      margin-top: 8px;
+    }
+    @media (max-width: 600px) {
+      .status-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <div id="statusContent">
+    <div class="loading" data-i18n="greetings_status.loading">Loading status...</div>
+  </div>
+</div>
+
+<script>
+  (async function() {
+    const container = document.currentScript.parentNode;
+    const statusDiv = document.getElementById('statusContent');
+    const urlParams = new URLSearchParams(window.location.search);
+    const guildId = urlParams.get('guild');
+    
+    // Translation helper
+    const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+
+    if (!guildId) {
+      statusDiv.innerHTML = `<div class="error-message" data-i18n="greetings_status.no_guild">${t('greetings_status.no_guild', 'No guild selected')}</div>`;
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      return;
+    }
+
+    // Helper: apiFetch (assumes it's globally available from server.html)
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (res.status === 401) {
+        window.location.href = '/login.html';
+        return null;
+      }
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    const confirmFn = typeof window.showConfirmModal === 'function'
+      ? window.showConfirmModal
+      : (title, msg) => Promise.resolve(window.confirm(msg));
+
+    const notify = typeof window.showNotification === 'function'
+      ? window.showNotification
+      : (msg) => alert(msg);
+
+    async function loadStatus() {
+      statusDiv.innerHTML = `<div class="loading" data-i18n="common.loading">${t('common.loading', 'Loading status...')}</div>`;
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+
+      try {
+        const data = await apiFetch(`/api/guilds/${guildId}/greetings/status`);
+        const channels = await apiFetch(`/api/guilds/${guildId}/channels`);
+        const channelMap = Object.fromEntries(channels.map(c => [c.id, c.name]));
+
+        // Define greeting types with translation keys
+        const channelGreetings = [
+          { key: 'welcome', labelKey: 'greetings_status.welcome' },
+          { key: 'farewell', labelKey: 'greetings_status.farewell' },
+          { key: 'ban', labelKey: 'greetings_status.ban' },
+          { key: 'kick', labelKey: 'greetings_status.kick' }
+        ];
+
+        const dmGreetings = [
+          { key: 'welcome_dm', labelKey: 'greetings_status.welcome_dm' },
+          { key: 'farewell_dm', labelKey: 'greetings_status.farewell_dm' }
+        ];
+
+        let html = `
+          <div class="status-grid">
+            <div class="status-card">
+              <div class="status-header"><i>📢</i> <span data-i18n="greetings_status.channel_greetings">Channel Greetings</span></div>
+        `;
+
+        channelGreetings.forEach(g => {
+          const enabled = data[`${g.key}_enabled`] ? true : false;
+          const channelId = data[`${g.key}_channel_id`] || null;
+          const channelName = channelId ? (channelMap[channelId] || channelId) : null;
+
+          html += `
+            <div class="status-item">
+              <div class="status-label">
+                <span data-i18n="${g.labelKey}">${t(g.labelKey, g.key.charAt(0).toUpperCase() + g.key.slice(1))}</span>
+                ${channelName ? `<span class="channel-badge">#${channelName}</span>` : ''}
+              </div>
+              <label class="switch">
+                <input type="checkbox" class="greeting-toggle" data-type="${g.key}" ${enabled ? 'checked' : ''}>
+                <span class="slider"></span>
+              </label>
+            </div>
+          `;
+        });
+
+        html += `
+            </div>
+            <div class="status-card">
+              <div class="status-header"><i>✉️</i> <span data-i18n="greetings_status.dm_greetings">DM Greetings</span></div>
+        `;
+
+        dmGreetings.forEach(g => {
+          const enabled = data[`${g.key}_enabled`] ? true : false;
+          html += `
+            <div class="status-item">
+              <div class="status-label">
+                <span data-i18n="${g.labelKey}">${t(g.labelKey, g.key.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()))}</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" class="greeting-toggle" data-type="${g.key}" ${enabled ? 'checked' : ''}>
+                <span class="slider"></span>
+              </label>
+            </div>
+          `;
+        });
+
+        html += `
+            </div>
+          </div>
+          <!-- Other Features -->
+          <div class="status-card full-width">
+            <div class="status-header"><i>🔍</i> <span data-i18n="greetings_status.other_features">Other Features</span></div>
+            <div class="status-item">
+              <div class="status-label" data-i18n="greetings_status.invite_tracking">Invite Tracking</div>
+              <label class="switch">
+                <input type="checkbox" class="greeting-toggle" data-type="invite_tracking" ${data.invite_tracking_enabled ? 'checked' : ''}>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="btn-save-all">
+            <button class="btn btn-primary glow-btn" id="saveAllStatus" data-i18n="greetings_status.save_changes">Save Changes</button>
+          </div>
+        `;
+
+        statusDiv.innerHTML = html;
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+
+        const saveBtn = document.getElementById('saveAllStatus');
+        const toggles = document.querySelectorAll('.greeting-toggle');
+        const switches = document.querySelectorAll('.switch');
+
+        const originalState = {};
+        toggles.forEach(t => {
+          originalState[t.dataset.type] = t.checked;
+        });
+
+        function hasChanges() {
+          return Array.from(toggles).some(t => t.checked !== originalState[t.dataset.type]);
+        }
+
+        function updateSaveButton() {
+          saveBtn.disabled = !hasChanges();
+        }
+
+        toggles.forEach(t => {
+          t.addEventListener('change', updateSaveButton);
+        });
+
+        updateSaveButton();
+
+        saveBtn.addEventListener('click', async () => {
+          const confirmed = await confirmFn(
+            t('greetings_status.confirm_update', 'Confirm Update'),
+            t('greetings_status.confirm_update_msg', 'Are you sure you want to change greetings status?')
+          );
+          if (!confirmed) return;
+
+          switches.forEach(s => s.classList.add('disabled'));
+          saveBtn.disabled = true;
+          const originalText = saveBtn.innerHTML;
+          saveBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('greetings_status.saving', 'Saving...')}`;
+
+          const payload = {};
+          toggles.forEach(t => {
+            const type = t.dataset.type;
+            payload[`${type}_enabled`] = t.checked ? 1 : 0;
+          });
+
+          try {
+            await apiFetch(`/api/guilds/${guildId}/greetings/settings`, {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+
+            toggles.forEach(t => {
+              originalState[t.dataset.type] = t.checked;
+            });
+
+            notify(t('greetings_status.updated', 'Greetings status updated'));
+          } catch (err) {
+            notify(t('greetings_status.update_failed', 'Failed to save: ') + err.message);
+          } finally {
+            switches.forEach(s => s.classList.remove('disabled'));
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+            updateSaveButton();
+          }
+        });
+
+      } catch (err) {
+        statusDiv.innerHTML = `<div class="error-message">${t('greetings_status.error', 'Error: ')} ${err.message}</div>`;
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      }
+    }
+
+    loadStatus();
+  })();
+</script>

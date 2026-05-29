@@ -1,0 +1,109 @@
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="confirmTitle">Confirm Action</h3>
+      <span class="close-modal" onclick="closeConfirmModal()">&times;</span>
+    </div>
+    <div class="modal-body">
+      <p id="confirmMessage">Are you sure?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button class="btn btn-primary" id="confirmOkBtn">OK</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: rgba(15,23,42,0.98);
+  border: 1px solid rgba(148,163,184,0.45);
+  border-radius: 12px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+.modal-header {
+  padding: 16px;
+  border-bottom: 1px solid rgba(148,163,184,0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h3 {
+  margin: 0;
+}
+.close-modal {
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.close-modal:hover {
+  color: var(--text);
+}
+.modal-body {
+  padding: 20px 16px;
+}
+.modal-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(148,163,184,0.2);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.btn-secondary {
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.2);
+}
+</style>
+
+<script>
+let confirmResolve = null;
+
+function showConfirmModal(title, message) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').textContent = message;
+  document.getElementById('confirmModal').style.display = 'flex';
+  return new Promise((resolve) => {
+    confirmResolve = resolve;
+  });
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirmModal').style.display = 'none';
+  if (confirmResolve) {
+    confirmResolve(false);
+    confirmResolve = null;
+  }
+}
+
+document.getElementById('confirmOkBtn').addEventListener('click', function() {
+  document.getElementById('confirmModal').style.display = 'none';
+  if (confirmResolve) {
+    confirmResolve(true);
+    confirmResolve = null;
+  }
+});
+
+// Close modal if clicking outside content (optional)
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirmModal();
+});
+</script>

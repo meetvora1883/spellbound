@@ -1,0 +1,45 @@
+<section class="panel">
+  <div class="panel-head"><span>🛡️ IP Rules</span></div>
+  <div class="panel-body">
+    <div class="field-row" style="margin-bottom:20px;">
+      <input type="text" id="newIp" class="field-input" placeholder="IP address">
+      <select id="newType"><option value="whitelist">Whitelist</option><option value="blacklist">Blacklist</option></select>
+      <button class="btn btn-primary glow-btn" id="addIpRule">Add Rule</button>
+    </div>
+    <table>
+      <thead><tr><th>IP</th><th>Type</th><th>Added By</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody id="ipRulesBody"></tbody>
+    </table>
+  </div>
+</section>
+<script>
+(async function() {
+  const tbody = document.getElementById('ipRulesBody');
+  async function load() {
+    const rules = await apiFetch('/api/admin/ip-rules');
+    tbody.innerHTML = rules.map(r => `
+      <tr>
+        <td>${r.ip}</td>
+        <td>${r.type}</td>
+        <td>${r.created_by}</td>
+        <td>${new Date(r.created_at).toLocaleString()}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="deleteIpRule(${r.id})">Delete</button></td>
+      </tr>
+    `).join('');
+  }
+  window.deleteIpRule = async (id) => {
+    if (!await showConfirmModal('Delete rule', 'Remove this IP rule?')) return;
+    await apiFetch(`/api/admin/ip-rules/${id}`, { method: 'DELETE' });
+    load();
+  };
+  document.getElementById('addIpRule').addEventListener('click', async () => {
+    const ip = document.getElementById('newIp').value.trim();
+    const type = document.getElementById('newType').value;
+    if (!ip) return alert('IP required');
+    await apiFetch('/api/admin/ip-rules', { method: 'POST', body: JSON.stringify({ ip, type }) });
+    load();
+    document.getElementById('newIp').value = '';
+  });
+  load();
+})();
+</script>

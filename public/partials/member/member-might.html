@@ -1,0 +1,701 @@
+<div class="member-might-panel">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .member-might-panel {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .view-section {
+      margin-bottom: 40px;
+    }
+    .view-section h2 {
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .view-section h2 .title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .view-section h2 .btn-link {
+      font-size: 0.9rem;
+      background: rgba(255,255,255,.1);
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      padding: 4px 12px;
+      cursor: pointer;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .view-section h2 .btn-link:hover {
+      background: rgba(255,255,255,.2);
+    }
+    .chart-container {
+      background: var(--panel);
+      border-radius: var(--r);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .table-container {
+      background: var(--panel);
+      border-radius: var(--r);
+      padding: 20px;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+    th {
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .form-card {
+      background: var(--panel);
+      border-radius: var(--r);
+      padding: 24px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .form-group input {
+      width: 100%;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+    }
+    .form-group input:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+    .submit-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .info-msg {
+      color: var(--muted);
+      font-style: italic;
+      text-align: center;
+      padding: 30px;
+    }
+    .error-msg {
+      color: #ff6b6b;
+    }
+    .chart-container.hidden {
+      display: none;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ff6b6b;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .delete-btn:hover {
+      background: rgba(255,107,107,0.2);
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-approved {
+      background: rgba(34,197,94,0.2);
+      color: #4ade80;
+    }
+    .status-rejected {
+      background: rgba(220,38,38,0.2);
+      color: #f87171;
+    }
+    /* Date range filter */
+    .date-range {
+      background: var(--panel);
+      border-radius: var(--r);
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+    }
+    .date-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .date-field label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .date-input-wrapper {
+      position: relative;
+      width: fit-content;
+    }
+    .date-input-wrapper input {
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text);
+      position: relative;
+      z-index: 2;
+      background: transparent; /* let the placeholder show through */
+    }
+    .date-input-wrapper input:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+    .date-placeholder {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted2);
+      pointer-events: none;
+      z-index: 1;
+      font-style: italic;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    .date-input-wrapper.input-filled .date-placeholder,
+    .date-input-wrapper input:focus + .date-placeholder {
+      display: none;
+    }
+    .apply-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      cursor: pointer;
+      font-weight: 600;
+      height: 38px;
+    }
+    .apply-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .apply-btn:hover:not(:disabled) {
+      background: var(--accent2);
+    }
+    #resetDateRange {
+      background: var(--muted);
+    }
+    #resetDateRange:hover {
+      background: #6b7280;
+    }
+    .validation-error {
+      color: #ff6b6b;
+      font-size: 0.85rem;
+      margin-top: 4px;
+      width: 100%;
+    }
+  </style>
+
+  <!-- Date Range Filter -->
+  <div class="date-range">
+    <div class="date-field">
+      <label>Start Date</label>
+      <div class="date-input-wrapper" id="startWrapper">
+        <input type="date" id="startDate">
+        <span class="date-placeholder" id="startPlaceholder"></span>
+      </div>
+    </div>
+    <div class="date-field">
+      <label>End Date</label>
+      <div class="date-input-wrapper" id="endWrapper">
+        <input type="date" id="endDate">
+        <span class="date-placeholder" id="endPlaceholder"></span>
+      </div>
+    </div>
+    <button class="apply-btn" id="applyDateRange">Apply</button>
+    <button class="apply-btn" id="resetDateRange">Reset</button>
+    <div id="dateError" class="validation-error"></div>
+  </div>
+
+  <!-- My Might History -->
+  <div class="view-section" id="historyView">
+    <h2>
+      <span class="title-group">
+        <i class="fas fa-chart-line"></i> My Might History
+      </span>
+      <a href="#" class="btn-link" id="showMoreHistoryBtn">View All <i class="fas fa-arrow-right"></i></a>
+    </h2>
+    <div class="chart-container" id="chartContainer">
+      <canvas id="mightChart"></canvas>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr id="historyHeader"></tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="3" class="info-msg">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Submit Might Update (only visible for self) -->
+  <div class="view-section" id="submitView">
+    <h2>
+      <span class="title-group">
+        <i class="fas fa-edit"></i> Submit Might Update
+      </span>
+    </h2>
+    <div class="form-card">
+      <div class="form-group">
+        <label>Your In‑Game Name</label>
+        <input type="text" id="inGameName" placeholder="e.g. WarriorKing" required>
+      </div>
+      <div class="form-group">
+        <label>New Might</label>
+        <input type="number" step="0.001" id="newMight" placeholder="e.g. 1250.5" required>
+      </div>
+      <button class="submit-btn" id="submitMightBtn">Submit for Approval</button>
+      <div id="submitMessage" class="info-msg" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- My Pending Submissions -->
+  <div class="view-section" id="pendingView">
+    <h2>
+      <span class="title-group">
+        <i class="fas fa-clock"></i> My Pending Submissions
+      </span>
+    </h2>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>In‑Game Name</th>
+            <th>Might</th>
+            <th>Status</th>
+            <th>Admin Notes</th>
+          </tr>
+        </thead>
+        <tbody id="pendingBody">
+          <tr><td colspan="5" class="info-msg">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Submission History (latest 5) -->
+  <div class="view-section" id="submissionHistoryView">
+    <h2>
+      <span class="title-group">
+        <i class="fas fa-history"></i> Submission History
+      </span>
+      <a href="#" class="btn-link" id="viewAllSubmissionsBtn">View All <i class="fas fa-arrow-right"></i></a>
+    </h2>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>In‑Game Name</th>
+            <th>Might</th>
+            <th>Status</th>
+            <th>Admin Notes</th>
+          </tr>
+        </thead>
+        <tbody id="submissionHistoryBody">
+          <tr><td colspan="5" class="info-msg">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    (async function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guildId = urlParams.get('guild');
+      if (!guildId) {
+        alert('No guild selected');
+        return;
+      }
+
+      const loggedInUserId = window.user?.id;
+      const targetUserId = window.viewingUserId || loggedInUserId;
+      if (!targetUserId) {
+        alert('Not logged in');
+        return;
+      }
+
+      const isViewingOther = targetUserId !== loggedInUserId;
+      const isAdmin = window.isAdmin || false;
+
+      // Chart instance
+      let mightChart = null;
+      let isLoadingHistory = false;
+      let isLoadingPending = false;
+      let isLoadingSubmissionHistory = false;
+
+      // Setup headers
+      function setupHeaders() {
+        const headerRow = document.getElementById('historyHeader');
+        let html = '<th>Date</th><th>Might</th>';
+        if (isAdmin) html += '<th>Actions</th>';
+        headerRow.innerHTML = html;
+      }
+      setupHeaders();
+
+      // ========== Date range filter with validation ==========
+      const startInput = document.getElementById('startDate');
+      const endInput = document.getElementById('endDate');
+      const applyBtn = document.getElementById('applyDateRange');
+      const resetBtn = document.getElementById('resetDateRange');
+      const dateError = document.getElementById('dateError');
+      const startWrapper = document.getElementById('startWrapper');
+      const endWrapper = document.getElementById('endWrapper');
+      const startPlaceholder = document.getElementById('startPlaceholder');
+      const endPlaceholder = document.getElementById('endPlaceholder');
+
+      function updatePlaceholders() {
+        if (startInput.value) {
+          startWrapper.classList.add('input-filled');
+        } else {
+          startWrapper.classList.remove('input-filled');
+        }
+        if (endInput.value) {
+          endWrapper.classList.add('input-filled');
+        } else {
+          endWrapper.classList.remove('input-filled');
+        }
+      }
+
+      function validateDates() {
+        const startVal = startInput.value;
+        const endVal = endInput.value;
+        const today = new Date().toISOString().split('T')[0];
+
+        if (!startVal && !endVal) {
+          dateError.textContent = '';
+          applyBtn.disabled = false;
+          return true;
+        }
+
+        if (startVal && endVal) {
+          if (startVal > endVal) {
+            dateError.textContent = 'Start date cannot be after end date.';
+            applyBtn.disabled = true;
+            return false;
+          }
+          if (endVal > today) {
+            dateError.textContent = 'End date cannot be in the future.';
+            applyBtn.disabled = true;
+            return false;
+          }
+        } else if (startVal && !endVal) {
+          if (startVal > today) {
+            dateError.textContent = 'Start date cannot be in the future.';
+            applyBtn.disabled = true;
+            return false;
+          }
+        } else if (!startVal && endVal) {
+          if (endVal > today) {
+            dateError.textContent = 'End date cannot be in the future.';
+            applyBtn.disabled = true;
+            return false;
+          }
+        }
+
+        dateError.textContent = '';
+        applyBtn.disabled = false;
+        return true;
+      }
+
+      startInput.addEventListener('input', () => {
+        updatePlaceholders();
+        validateDates();
+      });
+      endInput.addEventListener('input', () => {
+        updatePlaceholders();
+        validateDates();
+      });
+      // Also listen to change for browsers that don't fire input on date picker
+      startInput.addEventListener('change', () => {
+        updatePlaceholders();
+        validateDates();
+      });
+      endInput.addEventListener('change', () => {
+        updatePlaceholders();
+        validateDates();
+      });
+      updatePlaceholders();
+
+      // Load history (if no dates, fetch all)
+      async function loadHistoryRange(start, end) {
+        if (isLoadingHistory) return;
+        isLoadingHistory = true;
+        try {
+          let url = `/api/guilds/${guildId}/might/history-range/${targetUserId}`;
+          const params = new URLSearchParams();
+          if (start) params.append('start', start);
+          if (end) params.append('end', end);
+          if (params.toString()) url += '?' + params.toString();
+          const history = await apiFetch(url);
+          renderHistory(history, !start && !end); // pass flag for default view
+        } catch (err) {
+          document.getElementById('historyBody').innerHTML = `<tr><td colspan="${isAdmin ? 3 : 2}" class="error-msg">Error: ${err.message}</td></tr>`;
+        } finally {
+          isLoadingHistory = false;
+        }
+      }
+
+      function renderHistory(history, isDefaultView) {
+        const tbody = document.getElementById('historyBody');
+        const chartContainer = document.getElementById('chartContainer');
+        if (!history || history.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="${isAdmin ? 3 : 2}" class="info-msg">No history in this period.</td></tr>`;
+          chartContainer.classList.add('hidden');
+          return;
+        }
+        chartContainer.classList.remove('hidden');
+
+        // Table: show only latest 5 in default view, otherwise all in range
+        let tableData = history;
+        if (isDefaultView) {
+          tableData = [...history].sort((a, b) => b.recorded_at - a.recorded_at).slice(0, 5);
+        } else {
+          tableData = [...history].sort((a, b) => b.recorded_at - a.recorded_at);
+        }
+
+        tbody.innerHTML = '';
+        tableData.forEach(h => {
+          const date = new Date(h.recorded_at).toLocaleString();
+          let row = `<tr><td>${date}</td><td>${parseFloat(h.might).toLocaleString()}</td>`;
+          if (isAdmin) {
+            row += `<td><button class="delete-btn" data-id="${h.id}" title="Delete"><i class="fas fa-trash"></i></button></td>`;
+          }
+          row += '</tr>';
+          tbody.innerHTML += row;
+        });
+
+        // Delete handlers
+        if (isAdmin) {
+          document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const id = btn.dataset.id;
+              if (!confirm('Delete this entry?')) return;
+              try {
+                await apiFetch(`/api/might/history/${id}`, { method: 'DELETE' });
+                // Reload with current range
+                const start = startInput.value ? new Date(startInput.value).getTime() : null;
+                const end = endInput.value ? new Date(endInput.value).getTime() + 86399999 : null;
+                loadHistoryRange(start, end);
+              } catch (err) {
+                showNotification(`Failed: ${err.message}`, 4000);
+              }
+            });
+          });
+        }
+
+        // Chart: use all data (sorted ascending)
+        const sorted = [...history].sort((a, b) => a.recorded_at - b.recorded_at);
+        const labels = sorted.map(h => new Date(h.recorded_at).toLocaleDateString());
+        const data = sorted.map(h => h.might);
+        const ctx = document.getElementById('mightChart').getContext('2d');
+        if (mightChart) mightChart.destroy();
+        mightChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Might',
+              data: data,
+              borderColor: 'rgb(91, 107, 255)',
+              backgroundColor: 'rgba(91,107,255,0.1)',
+              tension: 0.1,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: false } }
+          }
+        });
+      }
+
+      applyBtn.addEventListener('click', () => {
+        if (!validateDates()) return;
+        const start = startInput.value ? new Date(startInput.value).getTime() : null;
+        const end = endInput.value ? new Date(endInput.value).getTime() + 86399999 : null;
+        loadHistoryRange(start, end);
+      });
+
+      resetBtn.addEventListener('click', () => {
+        startInput.value = '';
+        endInput.value = '';
+        dateError.textContent = '';
+        applyBtn.disabled = false;
+        updatePlaceholders();
+        loadHistoryRange(null, null); // load all, default view
+      });
+
+      // ========== Load pending submissions ==========
+      async function loadPending() {
+        if (isLoadingPending) return;
+        isLoadingPending = true;
+        try {
+          let url = isViewingOther
+            ? `/api/might/user-pending?guildId=${guildId}&userId=${targetUserId}`
+            : `/api/might/my-pending?guildId=${guildId}`;
+          const pending = await apiFetch(url);
+          const tbody = document.getElementById('pendingBody');
+          if (!pending || pending.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="info-msg">No pending submissions.</td></tr>';
+            return;
+          }
+          tbody.innerHTML = pending.map(p => {
+            const date = new Date(p.submitted_at).toLocaleString();
+            return `<tr>
+              <td>${date}</td>
+              <td>${p.in_game_name}</td>
+              <td>${parseFloat(p.submitted_might).toLocaleString()}</td>
+              <td>${p.status}</td>
+              <td>${p.admin_notes || ''}</td>
+            </tr>`;
+          }).join('');
+        } catch (err) {
+          document.getElementById('pendingBody').innerHTML = `<tr><td colspan="5" class="error-msg">Error: ${err.message}</td></tr>`;
+        } finally {
+          isLoadingPending = false;
+        }
+      }
+
+      // ========== Load submission history (latest 5) ==========
+      async function loadSubmissionHistory() {
+        if (isLoadingSubmissionHistory) return;
+        isLoadingSubmissionHistory = true;
+        try {
+          const url = `/api/might/user-submissions?guildId=${guildId}&userId=${targetUserId}&limit=5&offset=0`;
+          const data = await apiFetch(url);
+          const submissions = data.submissions || [];
+          const tbody = document.getElementById('submissionHistoryBody');
+          if (submissions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="info-msg">No submission history.</td></tr>';
+            return;
+          }
+          tbody.innerHTML = submissions.map(s => {
+            const date = new Date(s.submitted_at).toLocaleString();
+            const statusClass = s.status === 'approved' ? 'status-approved' : 'status-rejected';
+            return `<tr>
+              <td>${date}</td>
+              <td>${s.in_game_name}</td>
+              <td>${parseFloat(s.submitted_might).toLocaleString()}</td>
+              <td><span class="status-badge ${statusClass}">${s.status}</span></td>
+              <td>${s.admin_notes || ''}</td>
+            </tr>`;
+          }).join('');
+        } catch (err) {
+          document.getElementById('submissionHistoryBody').innerHTML = `<tr><td colspan="5" class="error-msg">Error: ${err.message}</td></tr>`;
+        } finally {
+          isLoadingSubmissionHistory = false;
+        }
+      }
+
+      // ========== Submit new might (only for self) ==========
+      const submitBtn = document.getElementById('submitMightBtn');
+      if (isViewingOther) {
+        document.getElementById('submitView').style.display = 'none';
+      } else {
+        submitBtn.addEventListener('click', async () => {
+          const inGameName = document.getElementById('inGameName').value.trim();
+          const might = document.getElementById('newMight').value.trim();
+          if (!inGameName || !might) {
+            showNotification('Please fill all fields', 3000);
+            return;
+          }
+
+          try {
+            const last = await apiFetch(`/api/players/${loggedInUserId}/last-might?guildId=${guildId}`);
+            if (last.might !== null && parseFloat(might) < parseFloat(last.might)) {
+              showNotification(`Might cannot be lower than last (${last.might})`, 4000);
+              return;
+            }
+          } catch (e) {}
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Submitting...';
+          try {
+            await apiFetch('/api/might/submit', {
+              method: 'POST',
+              body: JSON.stringify({ guildId, inGameName, might })
+            });
+            document.getElementById('submitMessage').textContent = '✅ Submission sent!';
+            document.getElementById('inGameName').value = '';
+            document.getElementById('newMight').value = '';
+            loadPending();
+          } catch (err) {
+            document.getElementById('submitMessage').textContent = `❌ Error: ${err.message}`;
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit for Approval';
+          }
+        });
+      }
+
+      // ========== "View All" links ==========
+      document.getElementById('showMoreHistoryBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.open(`/partials/member/member-history-full.html?guild=${guildId}&userId=${targetUserId}`, '_blank');
+      });
+      document.getElementById('viewAllSubmissionsBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.open(`/partials/member/member-submissions-full.html?guild=${guildId}&userId=${targetUserId}`, '_blank');
+      });
+
+      // ========== Socket listener ==========
+      socket.on('submissionUpdated', (data) => {
+        if (data.guildId === guildId) {
+          // Reload history with current range
+          const start = startInput.value ? new Date(startInput.value).getTime() : null;
+          const end = endInput.value ? new Date(endInput.value).getTime() + 86399999 : null;
+          loadHistoryRange(start, end);
+          loadPending();
+          loadSubmissionHistory();
+        }
+      });
+
+      // ========== Initial load (all data, empty dates) ==========
+      await loadHistoryRange(null, null);
+      await loadPending();
+      await loadSubmissionHistory();
+    })();
+  </script>
+</div>

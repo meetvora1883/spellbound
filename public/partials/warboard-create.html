@@ -1,0 +1,591 @@
+<!-- warboard-create.html – Complete Warboard Management -->
+<div class="warboard-create-panel">
+  <style>
+    .warboard-create-panel {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .create-card {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+    .create-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .date-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .date-input-wrapper input[type="text"] {
+      flex: 1;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .date-input-wrapper input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(91,107,255,0.3);
+    }
+    .calendar-btn-container {
+      position: relative;
+      display: inline-block;
+    }
+    .calendar-btn {
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: background 0.2s;
+      pointer-events: none;
+    }
+    .calendar-btn:hover {
+      background: rgba(255,255,255,.15);
+    }
+    .overlay-date-input {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+      margin: 0;
+    }
+    .form-group input.error,
+    .form-group select.error {
+      border-color: #ff6b6b;
+      box-shadow: 0 0 0 2px rgba(255,107,107,0.3);
+    }
+    .error-message {
+      color: #ff6b6b;
+      font-size: 0.8rem;
+      margin-top: 4px;
+      display: none;
+    }
+    .error-message.show {
+      display: block;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .checkbox-group label {
+      color: var(--text);
+      cursor: pointer;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+    .btn-create {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 14px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    .btn-create:hover {
+      background: var(--accent2);
+    }
+    .btn-create:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .source-date-container {
+      display: none;
+      margin-top: 10px;
+    }
+    .source-date-container.visible {
+      display: block;
+    }
+    .help-text {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 8px;
+      text-align: center;
+    }
+    .list-card {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .list-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .warboards-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .warboards-table th {
+      text-align: left;
+      padding: 12px 8px;
+      color: var(--muted);
+      font-weight: 500;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+    .warboards-table td {
+      padding: 12px 8px;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      color: var(--text);
+    }
+    .warboards-table tr:last-child td {
+      border-bottom: none;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .action-btn {
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--stroke);
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .action-btn.view {
+      background: rgba(91,107,255,0.2);
+      border-color: rgba(91,107,255,0.5);
+      color: #a5b4fc;
+    }
+    .action-btn.view:hover {
+      background: rgba(91,107,255,0.4);
+      color: white;
+    }
+    .action-btn.copy {
+      background: rgba(34,197,94,0.2);
+      border-color: rgba(34,197,94,0.5);
+      color: #86efac;
+    }
+    .action-btn.copy:hover {
+      background: rgba(34,197,94,0.4);
+      color: white;
+    }
+    .action-btn.delete {
+      background: rgba(220,38,38,0.2);
+      border-color: rgba(220,38,38,0.5);
+      color: #fca5a5;
+    }
+    .action-btn.delete:hover {
+      background: rgba(220,38,38,0.4);
+      color: white;
+    }
+    .empty-message {
+      text-align: center;
+      padding: 30px;
+      color: var(--muted);
+      font-style: italic;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+  </style>
+
+  <!-- Creation card -->
+  <div class="create-card">
+    <div class="create-title" data-i18n="warboard_create.title"><i class="fas fa-calendar-plus"></i> Create New Warboard</div>
+
+    <div class="form-group" id="newDateGroup">
+      <label data-i18n="warboard_create.new_war_date">New War Date <span style="color:var(--muted);" data-i18n="warboard_create.date_format_hint">(YYYY-MM-DD or DD MMM YYYY)</span></label>
+      <div class="date-input-wrapper">
+        <input type="text" id="newDate" data-i18n-placeholder="warboard_create.date_placeholder" placeholder="e.g. 2026-03-15 or 15 Mar 2026">
+        <div class="calendar-btn-container">
+          <button type="button" class="calendar-btn" id="calendarIconBtn" title="Pick a date" data-i18n-title="warboard_create.pick_date">
+            <i class="fas fa-calendar-alt"></i>
+          </button>
+          <input type="date" id="overlayDatePicker" class="overlay-date-input">
+        </div>
+      </div>
+      <div id="newDateError" class="error-message" data-i18n="warboard_create.please_enter_valid_date">Please enter a valid date</div>
+    </div>
+
+    <div class="checkbox-group">
+      <input type="checkbox" id="copyToggle">
+      <label for="copyToggle" data-i18n="warboard_create.copy_assignments">Copy assignments from an existing date</label>
+    </div>
+
+    <div id="sourceDateContainer" class="source-date-container">
+      <div class="form-group">
+        <label data-i18n="warboard_create.source_date">Source Date</label>
+        <select id="sourceDate">
+          <option value="" data-i18n="warboard_create.select_source_date">-- Select source date --</option>
+        </select>
+        <div id="sourceDateError" class="error-message" data-i18n="warboard_create.please_select_source_date">Please select a source date</div>
+      </div>
+    </div>
+
+    <button class="btn-create glow-btn" id="createBtn" data-i18n="warboard_create.create_warboard">Create Warboard</button>
+    <div class="help-text" data-i18n="warboard_create.duplicate_warning">If the date already exists, no duplicate will be created.</div>
+  </div>
+
+  <!-- Management card (list of existing warboards) -->
+  <div class="list-card">
+    <div class="list-title" data-i18n="warboard_create.existing_warboards"><i class="fas fa-list"></i> Existing Warboards</div>
+    <div style="overflow-x: auto;">
+      <table class="warboards-table" id="warboardsTable">
+        <thead>
+          <tr>
+            <th data-i18n="warboard_create.date">Date</th>
+            <th data-i18n="warboard_create.assignments_count">Assignments</th>
+            <th style="min-width: 200px;" data-i18n="warboard_create.actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="warboardsBody">
+          <tr><td colspan="3" class="loading" data-i18n="warboard_create.loading">Loading warboards...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Self‑contained helpers (unchanged)
+    if (typeof apiFetch === 'undefined') {
+      window.apiFetch = async function(path, options = {}) {
+        const res = await fetch(path, {
+          ...options,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', ...options.headers }
+        });
+        if (res.status === 401) {
+          window.location.href = '/login.html';
+          return null;
+        }
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || `${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        } else {
+          const text = await res.text();
+          if (!res.ok) {
+            throw new Error(`${res.status}: ${text}`);
+          }
+          return { success: true, message: text };
+        }
+      };
+    }
+
+    if (typeof showNotification === 'undefined') {
+      window.showNotification = function(message, duration) {
+        alert(message);
+      };
+    }
+
+    if (typeof showConfirmModal === 'undefined') {
+      window.showConfirmModal = async function(title, message) {
+        return Promise.resolve(confirm(message));
+      };
+    }
+
+    (async function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guildId = urlParams.get('guild');
+      if (!guildId) {
+        alert('No guild selected');
+        return;
+      }
+
+      // Translation helper
+      const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+
+      // DOM elements
+      const newDateInput = document.getElementById('newDate');
+      const copyToggle = document.getElementById('copyToggle');
+      const sourceDateContainer = document.getElementById('sourceDateContainer');
+      const sourceDateSelect = document.getElementById('sourceDate');
+      const createBtn = document.getElementById('createBtn');
+      const newDateGroup = document.getElementById('newDateGroup');
+      const newDateError = document.getElementById('newDateError');
+      const sourceDateError = document.getElementById('sourceDateError');
+      const overlayDatePicker = document.getElementById('overlayDatePicker');
+      const warboardsBody = document.getElementById('warboardsBody');
+
+      if (overlayDatePicker) {
+        overlayDatePicker.addEventListener('change', () => {
+          if (overlayDatePicker.value) {
+            newDateInput.value = overlayDatePicker.value;
+          }
+        });
+        overlayDatePicker.addEventListener('click', () => {});
+      } else {
+        console.error('Overlay date picker not found');
+      }
+
+      function formatDateDisplay(dateStr) {
+        const months = [
+          t('months.jan', 'Jan'), t('months.feb', 'Feb'), t('months.mar', 'Mar'),
+          t('months.apr', 'Apr'), t('months.may', 'May'), t('months.jun', 'Jun'),
+          t('months.jul', 'Jul'), t('months.aug', 'Aug'), t('months.sep', 'Sep'),
+          t('months.oct', 'Oct'), t('months.nov', 'Nov'), t('months.dec', 'Dec')
+        ];
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          const [year, month, day] = parts;
+          return `${parseInt(day)} ${months[parseInt(month)-1]} ${year}`;
+        }
+        return dateStr;
+      }
+
+      async function loadWarboardsList() {
+        warboardsBody.innerHTML = `<tr><td colspan="3" class="loading" data-i18n="common.loading">${t('common.loading', 'Loading...')}</td></tr>`;
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+        try {
+          const dates = await apiFetch(`/api/warboards?guildId=${guildId}`);
+          if (!dates || dates.length === 0) {
+            warboardsBody.innerHTML = `<tr><td colspan="3" class="empty-message" data-i18n="warboard_create.no_warboards">${t('warboard_create.no_warboards', 'No warboards found')}</td></tr>`;
+            if (typeof window.applyTranslations === 'function') window.applyTranslations();
+            return;
+          }
+          let html = '';
+          for (const w of dates) {
+            let count = 0;
+            try {
+              const assignments = await apiFetch(`/api/warboards/${w.war_date}?guildId=${guildId}`);
+              count = assignments.length;
+            } catch (e) {}
+            const displayDate = formatDateDisplay(w.war_date);
+            html += `<tr data-date="${w.war_date}">
+              <td>${displayDate}</td>
+              <td>${count} ${t('warboard_create.players', 'players')}</td>
+              <td class="action-buttons">
+                <button class="action-btn view glow-btn" data-date="${w.war_date}" data-i18n="warboard_create.view"><i class="fas fa-eye"></i> ${t('warboard_create.view', 'View')}</button>
+                <button class="action-btn copy glow-btn" data-date="${w.war_date}" data-i18n="warboard_create.copy"><i class="fas fa-copy"></i> ${t('warboard_create.copy', 'Copy')}</button>
+                <button class="action-btn delete glow-btn" data-date="${w.war_date}" data-i18n="warboard_create.delete"><i class="fas fa-trash"></i> ${t('warboard_create.delete', 'Delete')}</button>
+              </td>
+            </tr>`;
+          }
+          warboardsBody.innerHTML = html;
+          if (typeof window.applyTranslations === 'function') window.applyTranslations();
+
+          // Attach event handlers
+          document.querySelectorAll('.action-btn.view').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const date = btn.dataset.date;
+              window.open(`/partials/warboard-view.html?guild=${guildId}&date=${encodeURIComponent(date)}`, '_blank');
+            });
+          });
+
+          document.querySelectorAll('.action-btn.copy').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const sourceDate = btn.dataset.date;
+              const targetDate = prompt(t('warboard_create.enter_target_date', 'Enter target date (YYYY-MM-DD or DD MMM YYYY):'));
+              if (!targetDate) return;
+
+              const confirmed = await showConfirmModal(
+                t('warboard_create.copy_warboard', 'Copy Warboard'),
+                t('warboard_create.confirm_copy_msg', `This will replace all assignments on ${targetDate} with those from ${sourceDate}. Continue?`)
+              );
+              if (!confirmed) return;
+
+              btn.disabled = true;
+              const originalText = btn.innerHTML;
+              btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('warboard_create.copying', 'Copying...')}`;
+
+              try {
+                try {
+                  await apiFetch(`/api/warboards/${encodeURIComponent(targetDate)}?guildId=${guildId}`, { method: 'DELETE', body: JSON.stringify({ guildId }) });
+                } catch (err) {
+                  if (!err.message.includes('404')) throw err;
+                }
+                const result = await apiFetch('/api/warboards/copy', { method: 'POST', body: JSON.stringify({ guildId, source: sourceDate, target: targetDate }) });
+                showNotification(t('warboard_create.copied_assignments', `Copied ${result.copied} assignments to ${targetDate}`), 3000);
+                loadWarboardsList();
+              } catch (err) {
+                showNotification(t('warboard_create.copy_failed', 'Copy failed: ') + err.message, 4000);
+              } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+              }
+            });
+          });
+
+          document.querySelectorAll('.action-btn.delete').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const date = btn.dataset.date;
+              const confirmed = await showConfirmModal(
+                t('warboard_create.delete_warboard', 'Delete Warboard'),
+                t('warboard_create.confirm_delete_msg', `Are you sure you want to delete the warboard for ${formatDateDisplay(date)}?`)
+              );
+              if (!confirmed) return;
+              btn.disabled = true;
+              const originalText = btn.innerHTML;
+              btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('warboard_create.deleting', 'Deleting...')}`;
+              try {
+                await apiFetch(`/api/warboards/${encodeURIComponent(date)}`, { method: 'DELETE', body: JSON.stringify({ guildId }) });
+                showNotification(t('warboard_create.warboard_deleted', 'Warboard deleted'), 3000);
+                loadWarboardsList();
+              } catch (err) {
+                showNotification(t('warboard_create.delete_failed', 'Delete failed: ') + err.message, 4000);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+              }
+            });
+          });
+        } catch (err) {
+          warboardsBody.innerHTML = `<tr><td colspan="3" class="empty-message" data-i18n="common.error">${t('common.error', 'Error: ')} ${err.message}</td></tr>`;
+          if (typeof window.applyTranslations === 'function') window.applyTranslations();
+        }
+      }
+
+      async function loadSourceDates() {
+        try {
+          const dates = await apiFetch(`/api/warboards?guildId=${guildId}`);
+          sourceDateSelect.innerHTML = `<option value="">${t('warboard_create.select_source_date', '-- Select source date --')}</option>`;
+          if (dates && dates.length) {
+            dates.forEach(w => {
+              const opt = document.createElement('option');
+              opt.value = w.war_date;
+              opt.textContent = formatDateDisplay(w.war_date);
+              sourceDateSelect.appendChild(opt);
+            });
+          }
+        } catch (err) {
+          console.error('Failed to load dates:', err);
+          showNotification(t('warboard_create.load_dates_failed', 'Failed to load existing dates'), 4000);
+        }
+      }
+
+      copyToggle.addEventListener('change', () => {
+        if (copyToggle.checked) {
+          sourceDateContainer.classList.add('visible');
+          loadSourceDates();
+        } else {
+          sourceDateContainer.classList.remove('visible');
+          sourceDateSelect.value = '';
+        }
+      });
+
+      newDateInput.addEventListener('input', () => {
+        newDateGroup.classList.remove('error');
+        newDateError.classList.remove('show');
+      });
+      sourceDateSelect.addEventListener('change', () => {
+        sourceDateSelect.classList.remove('error');
+        sourceDateError.classList.remove('show');
+      });
+
+      createBtn.addEventListener('click', async () => {
+        let isValid = true;
+
+        if (!newDateInput.value.trim()) {
+          newDateGroup.classList.add('error');
+          newDateError.classList.add('show');
+          isValid = false;
+        } else {
+          newDateGroup.classList.remove('error');
+          newDateError.classList.remove('show');
+        }
+
+        if (copyToggle.checked && !sourceDateSelect.value) {
+          sourceDateSelect.classList.add('error');
+          sourceDateError.classList.add('show');
+          isValid = false;
+        } else {
+          sourceDateSelect.classList.remove('error');
+          sourceDateError.classList.remove('show');
+        }
+
+        if (!isValid) return;
+
+        const payload = { guildId, date: newDateInput.value.trim() };
+
+        createBtn.disabled = true;
+        const originalText = createBtn.innerHTML;
+        createBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('warboard_create.creating', 'Creating...')}`;
+
+        try {
+          if (copyToggle.checked && sourceDateSelect.value) {
+            const copyPayload = {
+              guildId,
+              source: sourceDateSelect.value,
+              target: newDateInput.value.trim()
+            };
+            const result = await apiFetch('/api/warboards/copy', { method: 'POST', body: JSON.stringify(copyPayload) });
+            showNotification(t('warboard_create.created_and_copied', `Warboard created and ${result.copied} assignments copied!`), 4000);
+          } else {
+            await apiFetch('/api/warboards', { method: 'POST', body: JSON.stringify(payload) });
+            showNotification(t('warboard_create.created_successfully', 'Warboard created successfully!'), 3000);
+          }
+
+          newDateInput.value = '';
+          copyToggle.checked = false;
+          sourceDateContainer.classList.remove('visible');
+          sourceDateSelect.innerHTML = `<option value="">${t('warboard_create.select_source_date', '-- Select source date --')}</option>`;
+          await loadWarboardsList();
+        } catch (err) {
+          if (err.message.includes('UNIQUE') || err.message.includes('duplicate') || err.message.includes('already exists')) {
+            showNotification(t('warboard_create.date_already_exists', 'This date already exists. No duplicate created.'), 4000);
+          } else {
+            showNotification(t('warboard_create.create_failed', 'Failed to create warboard: ') + err.message, 4000);
+          }
+        } finally {
+          createBtn.disabled = false;
+          createBtn.innerHTML = originalText;
+        }
+      });
+
+      // Initial load
+      await loadWarboardsList();
+    })();
+  </script>
+</div>

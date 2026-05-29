@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Owner Panel - Warboard</title>
+  <style>
+    :root{
+      --bg0:#071027;
+      --bg1:#0b1736;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.08);
+      --stroke: rgba(255,255,255,.10);
+      --stroke2: rgba(255,255,255,.14);
+      --text:#e7eefc;
+      --muted:#9aa8c7;
+      --muted2:#7f8db0;
+      --accent:#5b6bff;
+      --accent2:#7c5cff;
+      --good:#22c55e;
+      --shadow: 0 16px 40px rgba(0,0,0,.45);
+      --r: 16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      padding:20px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(124,92,255,.25), transparent 60%),
+        radial-gradient(900px 500px at 85% 35%, rgba(91,107,255,.20), transparent 60%),
+        radial-gradient(1100px 700px at 60% 100%, rgba(34,197,94,.12), transparent 65%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      min-height: 100vh;
+    }
+    .container{
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(255,255,255,.03);
+      border-radius: var(--r);
+      padding: 20px;
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--stroke);
+    }
+    .header{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .nav-links a{
+      color: var(--accent);
+      text-decoration: none;
+      margin-right: 16px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--stroke);
+    }
+    .nav-links a:hover{
+      background: rgba(255,255,255,.12);
+    }
+    .tabs{
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--stroke);
+      padding-bottom: 10px;
+    }
+    .tab{
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--stroke);
+      transition: 0.2s;
+    }
+    .tab.active{
+      background: var(--accent);
+      border-color: var(--accent2);
+    }
+    .tab:hover{
+      background: rgba(255,255,255,.12);
+    }
+    .panel{
+      display: none;
+      background: rgba(255,255,255,.04);
+      border-radius: var(--r);
+      padding: 20px;
+      border: 1px solid var(--stroke);
+    }
+    .panel.active{
+      display: block;
+    }
+    table{
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td{
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--stroke);
+    }
+    th{
+      background: rgba(255,255,255,.08);
+    }
+    input, select{
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    button{
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover{
+      background: var(--accent2);
+    }
+    button.danger{
+      background: #dc3545;
+    }
+    button.danger:hover{
+      background: #c82333;
+    }
+    .form-row{
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .form-row input{
+      flex: 1;
+      min-width: 150px;
+    }
+    .stats-grid{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-card{
+      background: rgba(255,255,255,.06);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+    }
+    .stat-card .label{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .stat-card .value{
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .error-message{
+      color: #ff6b6b;
+      padding: 8px;
+      border-radius: 6px;
+      background: rgba(255,0,0,.1);
+      margin: 10px 0;
+    }
+    .hidden{ display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Owner Control Panel</h1>
+      <div class="nav-links">
+        <a href="/dashboard.html">← Dashboard</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" data-tab="dashboard">Dashboard</div>
+      <div class="tab" data-tab="users">Web Users</div>
+      <div class="tab" data-tab="settings">Settings</div>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div class="panel active" id="dashboard-panel">
+      <h2>Overview</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Total Guilds</div>
+          <div class="value" id="totalGuilds">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Web Users</div>
+          <div class="value" id="totalWebUsers">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Total Warboards</div>
+          <div class="value" id="totalWarboards">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Total Players</div>
+          <div class="value" id="totalPlayers">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Tab -->
+    <div class="panel" id="users-panel">
+      <h2>Manage Web Users</h2>
+      <p>These users can log in with username/password to access the panel.</p>
+
+      <h3>Add New User</h3>
+      <div class="form-row">
+        <input type="text" id="newUsername" placeholder="Username" required>
+        <input type="password" id="newPassword" placeholder="Password" required>
+        <input type="text" id="newDiscordId" placeholder="Discord ID (optional)">
+        <button id="addUserBtn">Add User</button>
+      </div>
+
+      <div id="userError" class="error-message hidden"></div>
+
+      <h3>Existing Users</h3>
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Discord ID</th>
+            <th>Created By</th>
+            <th>Created At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="panel" id="settings-panel">
+      <h2>Bot Settings</h2>
+      <p>Configure global bot settings here.</p>
+      <!-- Add settings later -->
+    </div>
+  </div>
+
+  <script>
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (res.status === 401) {
+        window.location.href = '/login.html';
+        return null;
+      }
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text}`);
+      }
+      return res.json();
+    }
+
+    // Tab switching
+    const tabs = document.querySelectorAll('.tab');
+    const panels = {
+      dashboard: document.getElementById('dashboard-panel'),
+      users: document.getElementById('users-panel'),
+      settings: document.getElementById('settings-panel')
+    };
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.tab;
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        Object.values(panels).forEach(p => p.classList.remove('active'));
+        panels[target].classList.add('active');
+        if (target === 'users') loadUsers();
+        if (target === 'dashboard') loadDashboardStats();
+      });
+    });
+
+    // Load dashboard stats
+    async function loadDashboardStats() {
+      try {
+        const guilds = await apiFetch('/api/guilds');
+        document.getElementById('totalGuilds').textContent = guilds.length;
+
+        const users = await apiFetch('/api/admin/web-users');
+        document.getElementById('totalWebUsers').textContent = users.length;
+
+        // Aggregate totals across guilds (simplified)
+        let totalWarboards = 0, totalPlayers = 0;
+        for (const g of guilds) {
+          const stats = await apiFetch(`/api/guilds/${g.id}/stats`);
+          totalWarboards += stats.warboards || 0;
+          totalPlayers += stats.players || 0;
+        }
+        document.getElementById('totalWarboards').textContent = totalWarboards;
+        document.getElementById('totalPlayers').textContent = totalPlayers;
+      } catch (err) {
+        console.error('Failed to load stats', err);
+      }
+    }
+
+    // Users management
+    async function loadUsers() {
+      try {
+        const users = await apiFetch('/api/admin/web-users');
+        const tbody = document.querySelector('#usersTable tbody');
+        tbody.innerHTML = '';
+        users.forEach(u => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${u.id}</td>
+            <td>${u.username}</td>
+            <td>${u.discord_id || '-'}</td>
+            <td>${u.created_by}</td>
+            <td>${new Date(u.created_at).toLocaleString()}</td>
+            <td>
+              <button class="resetBtn" data-id="${u.id}">Reset Password</button>
+              <button class="deleteBtn danger" data-id="${u.id}">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        document.querySelectorAll('.resetBtn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            const newPass = prompt('Enter new password:');
+            if (!newPass) return;
+            await fetch(`/api/admin/web-users/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password: newPass }),
+              credentials: 'include'
+            });
+            alert('Password updated');
+          });
+        });
+
+        document.querySelectorAll('.deleteBtn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            if (!confirm('Delete this user?')) return;
+            await fetch(`/api/admin/web-users/${id}`, {
+              method: 'DELETE',
+              credentials: 'include'
+            });
+            loadUsers();
+          });
+        });
+      } catch (err) {
+        console.error('Failed to load users', err);
+        const errorDiv = document.getElementById('userError');
+        errorDiv.textContent = err.message;
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('addUserBtn').addEventListener('click', async () => {
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value;
+      const discordId = document.getElementById('newDiscordId').value.trim() || null;
+      if (!username || !password) return alert('Username and password required');
+      try {
+        await fetch('/api/admin/web-users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, discordId }),
+          credentials: 'include'
+        });
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('newDiscordId').value = '';
+        loadUsers();
+      } catch (err) {
+        alert('Failed to add user: ' + err.message);
+      }
+    });
+
+    function logout() {
+      fetch('/auth/logout', { method: 'GET', credentials: 'include' }).then(() => window.location.href = '/login.html');
+    }
+
+    // Initial load
+    (async () => {
+      // Verify owner access (if not owner, redirect)
+      try {
+        const user = await apiFetch('/auth/me');
+        if (user.id !== '1342054101399375875') { // REPLACE WITH YOUR OWNER_ID
+          alert('You are not authorized to view this page.');
+          window.location.href = '/dashboard.html';
+        }
+      } catch {
+        window.location.href = '/login.html';
+      }
+      loadDashboardStats();
+    })();
+  </script>
+</body>
+</html>

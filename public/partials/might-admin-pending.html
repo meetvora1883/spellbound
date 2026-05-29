@@ -1,0 +1,73 @@
+<div class="pending-panel">
+  <h2 data-i18n="pending_approvals.title">⏳ Pending Might Submissions</h2>
+  <div id="pendingList"></div>
+</div>
+<script>
+  (async function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const guildId = urlParams.get('guild');
+    if (!guildId) return;
+
+    const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+
+    async function loadPending() {
+      const pending = await apiFetch(`/api/might/pending?guildId=${guildId}`);
+      const container = document.getElementById('pendingList');
+      if (!pending.length) {
+        container.innerHTML = `<p data-i18n="pending_approvals.no_pending">${t('pending_approvals.no_pending', 'No pending submissions.')}</p>`;
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+        return;
+      }
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="pending_approvals.user">User</th>
+              <th data-i18n="pending_approvals.ingame_name">In‑game Name</th>
+              <th data-i18n="pending_approvals.might">Might</th>
+              <th data-i18n="pending_approvals.submitted">Submitted</th>
+              <th data-i18n="pending_approvals.actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      pending.forEach(p => {
+        const date = new Date(p.submitted_at).toLocaleString();
+        html += `
+          <tr>
+            <td>${p.username} (${p.user_id})</td>
+            <td>${p.in_game_name}</td>
+            <td>${p.submitted_might}</td>
+            <td>${date}</td>
+            <td>
+              <button class="approve btn-sm btn-success glow-btn" data-id="${p.id}" data-i18n="pending_approvals.approve">${t('pending_approvals.approve', 'Approve')}</button>
+              <button class="reject btn-sm btn-danger glow-btn" data-id="${p.id}" data-i18n="pending_approvals.reject">${t('pending_approvals.reject', 'Reject')}</button>
+              <input type="text" id="notes-${p.id}" data-i18n-placeholder="pending_approvals.notes_placeholder" placeholder="${t('pending_approvals.notes_placeholder', 'Notes')}">
+            </td>
+          </tr>
+        `;
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+
+      document.querySelectorAll('.approve').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const notes = document.getElementById(`notes-${id}`).value;
+          await apiFetch(`/api/might/approve/${id}`, { method: 'POST', body: JSON.stringify({ notes }) });
+          loadPending();
+        });
+      });
+      document.querySelectorAll('.reject').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const notes = document.getElementById(`notes-${id}`).value;
+          await apiFetch(`/api/might/reject/${id}`, { method: 'POST', body: JSON.stringify({ notes }) });
+          loadPending();
+        });
+      });
+    }
+    loadPending();
+  })();
+</script>

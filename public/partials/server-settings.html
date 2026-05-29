@@ -1,0 +1,25 @@
+<section class="panel">
+    <div class="panel-head">
+      <span>⚙️ Bot Settings</span>
+      <span class="badge">Settings</span>
+    </div>
+    <div class="panel-body">
+      <div class="field-block">
+        <div class="field-title">Nickname</div>
+        <div class="field-desc">Set the bot's display name in the server.</div>
+        <div class="field-row">
+          <input class="field-input" type="text" id="botNickname" value="Loading..." placeholder="Bot nickname" />
+          <button class="btn" id="applyNickname">Apply</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <script>
+    (async function() {
+      const bot = await apiFetch('/api/bot/info');
+      document.getElementById('botNickname').value = bot?.username || 'Warboard Bot';
+      document.getElementById('applyNickname').addEventListener('click', () => {
+        alert('Nickname change not implemented yet');
+      });
+    })();
+  </script>

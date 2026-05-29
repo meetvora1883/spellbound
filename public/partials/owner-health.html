@@ -1,0 +1,120 @@
+<style>
+  .health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .health-card {
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    border-radius: var(--r);
+    padding: 20px;
+    text-align: center;
+  }
+  .health-value { font-size: 2rem; font-weight: bold; color: var(--accent); }
+  .health-label { color: var(--muted); margin-top: 5px; font-size: 0.9rem; }
+  .health-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .health-toolbar .status-badge {
+    font-size: 0.8rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: var(--good);
+    color: #fff;
+  }
+  @keyframes subtlePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  .updating {
+    animation: subtlePulse 0.5s ease-in-out;
+  }
+</style>
+
+<section class="panel">
+  <div class="panel-head"><span>📊 Bot Health</span></div>
+  <div class="panel-body">
+    <div class="health-toolbar">
+      <span>Live Monitoring</span>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <span class="status-badge" id="updateStatus">● Online</span>
+        <button class="btn btn-primary glow-btn" id="refreshHealthBtn">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+      </div>
+    </div>
+    <div class="health-grid" id="healthGrid"></div>
+    <div style="text-align:right; margin-top:12px; color:var(--muted); font-size:0.8rem;" id="lastUpdated">
+      Last updated: --
+    </div>
+  </div>
+</section>
+
+<script>
+  (function() {
+    let healthInterval;
+
+    async function loadHealth() {
+      const btn = document.getElementById('refreshHealthBtn');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...'; }
+
+      try {
+        const data = await apiFetch('/api/bot/health');
+        renderHealth(data);
+        const statusBadge = document.getElementById('updateStatus');
+        if (statusBadge) {
+          statusBadge.textContent = '● Online';
+          statusBadge.style.background = 'var(--good)';
+        }
+        const lastUpdated = document.getElementById('lastUpdated');
+        if (lastUpdated) lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+      } catch(e) {
+        const statusBadge = document.getElementById('updateStatus');
+        if (statusBadge) {
+          statusBadge.textContent = '● Error';
+          statusBadge.style.background = '#dc3545';
+        }
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh'; }
+      }
+    }
+
+    function renderHealth(data) {
+      const grid = document.getElementById('healthGrid');
+      if (!grid) return;
+      grid.innerHTML = `
+        <div class="health-card"><div class="health-value">${data.cpu} ms</div><div class="health-label">CPU time</div></div>
+        <div class="health-card"><div class="health-value">${data.memory.usagePercent}%</div><div class="health-label">RAM</div></div>
+        <div class="health-card"><div class="health-value">${Math.floor(data.uptime / 3600)}h ${Math.floor((data.uptime % 3600)/60)}m</div><div class="health-label">Uptime</div></div>
+        <div class="health-card"><div class="health-value">${data.discordPing}ms</div><div class="health-label">Discord Latency</div></div>
+        <div class="health-card"><div class="health-value">${Math.round(data.heapUsed / 1024 / 1024)} MB</div><div class="health-label">Heap Used</div></div>
+        <div class="health-card"><div class="health-value">${data.eventLoopLag}ms</div><div class="health-label">Event Loop Lag</div></div>
+      `;
+    }
+
+    // Start only when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startHealth);
+    } else {
+      startHealth();
+    }
+
+    function startHealth() {
+      loadHealth();
+      healthInterval = setInterval(loadHealth, 3000);
+
+      const btn = document.getElementById('refreshHealthBtn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          clearInterval(healthInterval);
+          loadHealth();
+          healthInterval = setInterval(loadHealth, 3000);
+        });
+      }
+    }
+  })();
+</script>

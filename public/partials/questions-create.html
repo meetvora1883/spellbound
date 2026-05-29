@@ -1,0 +1,261 @@
+<div class="create-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+  <!-- Left: Form -->
+  <div>
+    <div class="panel">
+      <div class="panel-head">
+        <span data-i18n="questions_create.title">➕ Create New Question</span>
+      </div>
+      <div class="panel-body">
+        <div class="field-block">
+          <div class="field-title" data-i18n="questions_create.title_required">Title *</div>
+          <input type="text" id="qTitle" class="field-input" maxlength="256" data-i18n-placeholder="questions_create.title_placeholder" placeholder="Question title">
+        </div>
+        <div class="field-block">
+          <div class="field-title" data-i18n="questions_create.description">Description</div>
+          <textarea id="qDescription" class="field-input" rows="3" maxlength="2000" data-i18n-placeholder="questions_create.description_placeholder" placeholder="Optional description"></textarea>
+        </div>
+        <div class="field-block">
+          <div class="field-title" data-i18n="questions_create.footer">Footer</div>
+          <input type="text" id="qFooter" class="field-input" maxlength="2048" data-i18n-placeholder="questions_create.footer_placeholder" placeholder="Optional footer text">
+        </div>
+        <div class="field-block">
+          <div class="field-title" data-i18n="questions_create.suffix_label">Suffix (e.g., "points")</div>
+          <input type="text" id="qSuffix" class="field-input" maxlength="100" data-i18n-placeholder="questions_create.suffix_placeholder" placeholder="Suffix for numeric answers">
+        </div>
+        <div class="field-block">
+          <div class="field-title" data-i18n="questions_create.max_responses">Max responses per user</div>
+          <input type="number" id="qMax" class="field-input" min="0" value="1" data-i18n-placeholder="questions_create.max_responses_placeholder" placeholder="0 = unlimited">
+        </div>
+        <div class="field-block">
+          <button class="btn btn-primary glow-btn" id="createQuestionBtn" data-i18n="questions_create.create_button">Create Question</button>
+        </div>
+        <div id="createResult" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- Option adder (appears after creation) -->
+    <div id="optionSection" style="display:none; margin-top:20px;">
+      <div class="panel">
+        <div class="panel-head">
+          <span data-i18n="questions_create.add_options">➕ Add Options to Question <span id="optQuestionId"></span></span>
+        </div>
+        <div class="panel-body">
+          <div class="field-block">
+            <div class="field-title" data-i18n="questions_create.label_required">Label *</div>
+            <input type="text" id="optLabel" class="field-input" maxlength="80" data-i18n-placeholder="questions_create.label_placeholder" placeholder="Button text">
+          </div>
+          <div class="field-block">
+            <div class="field-title" data-i18n="questions_create.emoji_label">Emoji (unicode or custom ID)</div>
+            <input type="text" id="optEmoji" class="field-input" data-i18n-placeholder="questions_create.emoji_placeholder" placeholder="👍 or custom:123">
+          </div>
+          <div class="field-block">
+            <div class="field-title" data-i18n="questions_create.answer_text_label">Answer Text (optional)</div>
+            <input type="text" id="optAnswerText" class="field-input" data-i18n-placeholder="questions_create.answer_text_placeholder" placeholder="Display text for answer">
+          </div>
+          <div class="field-block">
+            <div class="field-title" data-i18n="questions_create.answer_number_label">Answer Number (optional)</div>
+            <input type="number" id="optAnswerNumber" class="field-input" step="any" data-i18n-placeholder="questions_create.answer_number_placeholder" placeholder="e.g., 10">
+          </div>
+          <div class="field-block">
+            <div class="field-title" data-i18n="questions_create.button_style">Button Style</div>
+            <select id="optStyle">
+              <option value="primary" data-i18n="questions_create.style_primary">Primary</option>
+              <option value="secondary" data-i18n="questions_create.style_secondary">Secondary</option>
+              <option value="success" data-i18n="questions_create.style_success">Success</option>
+              <option value="danger" data-i18n="questions_create.style_danger">Danger</option>
+            </select>
+          </div>
+          <div class="field-block">
+            <button class="btn btn-primary glow-btn" id="addOptionBtn" data-i18n="questions_create.add_option_button">Add Option</button>
+          </div>
+          <div id="optionsList" style="margin-top:15px;">
+            <h4 data-i18n="questions_create.added_options">Added Options</h4>
+            <table class="options-table">
+              <thead>
+                <tr>
+                  <th data-i18n="questions_create.label_col">Label</th>
+                  <th data-i18n="questions_create.emoji_col">Emoji</th>
+                  <th data-i18n="questions_create.answer_col">Answer</th>
+                  <th data-i18n="questions_create.style_col">Style</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="optionsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Live Preview -->
+  <div>
+    <div class="panel">
+      <div class="panel-head">
+        <span data-i18n="questions_create.live_preview">👁️ Live Preview</span>
+      </div>
+      <div class="panel-body" id="previewContainer">
+        <div class="preview-embed" style="background: #0f172a; border-radius: 12px; border: 1px solid #334155; padding: 16px;">
+          <div style="color: #5865F2; font-size: 1.2rem; font-weight: 600;" id="previewTitle" data-i18n="questions_create.preview_title_default">Question Title</div>
+          <div style="color: #94a3b8; margin: 8px 0;" id="previewDescription" data-i18n="questions_create.preview_description_default">Description goes here</div>
+          <div style="margin-top: 12px;">
+            <div style="color: #cbd5f5; font-size: 0.9rem; font-weight: 600;" data-i18n="questions_create.responses_label">Responses</div>
+            <div id="previewOptions" style="margin-top: 8px;"></div>
+          </div>
+          <div style="margin-top: 16px; color: #94a3b8; font-size: 0.8rem;" id="previewFooter" data-i18n="questions_create.status_draft">Status: draft</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .options-table {
+    width:100%;
+    border-collapse:collapse;
+    font-size:0.85rem;
+  }
+  .options-table th, .options-table td {
+    padding:8px;
+    border-bottom:1px solid #111827;
+    text-align:left;
+  }
+  .delete-option {
+    color: #ff6b6b;
+    cursor: pointer;
+  }
+</style>
+
+<script>
+  (async function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const guildId = urlParams.get('guild');
+    let currentQuestionId = null;
+    let currentOptions = [];
+
+    const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+
+    // Live preview update
+    function updatePreview() {
+      const title = document.getElementById('qTitle').value.trim() || t('questions_create.preview_title_default', 'Question Title');
+      const desc = document.getElementById('qDescription').value.trim() || t('questions_create.preview_description_default', 'Description goes here');
+      const footer = document.getElementById('qFooter').value.trim() || t('questions_create.status_draft', 'Status: draft');
+      const suffix = document.getElementById('qSuffix').value.trim();
+      document.getElementById('previewTitle').textContent = title;
+      document.getElementById('previewDescription').textContent = desc;
+      document.getElementById('previewFooter').textContent = footer;
+
+      let optionsHtml = '';
+      currentOptions.forEach((opt, idx) => {
+        let line = `• ${opt.label}`;
+        if (opt.answerNumber !== null && suffix) line += ` (${opt.answerNumber}${suffix})`;
+        optionsHtml += `<div style="margin: 4px 0;">${line}</div>`;
+      });
+      if (optionsHtml === '') optionsHtml = `<div style="color: #6b7280;" data-i18n="questions_create.no_options_yet">${t('questions_create.no_options_yet', 'No options added yet')}</div>`;
+      document.getElementById('previewOptions').innerHTML = optionsHtml;
+    }
+
+    // Attach input listeners for live preview
+    ['qTitle','qDescription','qFooter','qSuffix'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updatePreview);
+    });
+
+    document.getElementById('createQuestionBtn').addEventListener('click', async () => {
+      const title = document.getElementById('qTitle').value.trim();
+      if (!title) return alert(t('questions_create.title_required_alert', 'Title required'));
+      const data = {
+        title,
+        description: document.getElementById('qDescription').value.trim() || null,
+        footer: document.getElementById('qFooter').value.trim() || null,
+        suffix: document.getElementById('qSuffix').value.trim() || '',
+        maxInteractions: parseInt(document.getElementById('qMax').value) || 1
+      };
+      try {
+        const res = await apiFetch(`/api/guilds/${guildId}/questions`, {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+        currentQuestionId = res.id;
+        document.getElementById('createResult').innerHTML = `<span style="color:#22c55e;">✓ ${t('questions_create.created_message', 'Question created with ID')} ${currentQuestionId}. ${t('questions_create.add_options_now', 'Now add options below.')}</span>`;
+        document.getElementById('optionSection').style.display = 'block';
+        document.getElementById('optQuestionId').textContent = currentQuestionId;
+        loadOptions();
+      } catch (err) {
+        alert(t('common.error', 'Error: ') + err.message);
+      }
+    });
+
+    async function loadOptions() {
+      if (!currentQuestionId) return;
+      try {
+        const q = await apiFetch(`/api/guilds/${guildId}/questions/${currentQuestionId}`);
+        currentOptions = q.options || [];
+        renderOptionsTable();
+        updatePreview();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderOptionsTable() {
+      const tbody = document.getElementById('optionsBody');
+      if (currentOptions.length) {
+        tbody.innerHTML = currentOptions.map((opt, idx) => `
+          <tr>
+            <td>${opt.label}</td>
+            <td>${opt.emoji || ''}</td>
+            <td>${opt.answer_text || opt.answer_number || ''}</td>
+            <td>${opt.style}</td>
+            <td><span class="delete-option" data-id="${opt.id}" data-i18n="questions_create.delete">🗑</span></td>
+          </tr>
+        `).join('');
+        document.querySelectorAll('.delete-option').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const optionId = e.target.dataset.id;
+            if (!confirm(t('questions_create.confirm_delete_option', 'Delete this option?'))) return;
+            try {
+              await apiFetch(`/api/guilds/${guildId}/questions/${currentQuestionId}/options/${optionId}`, {
+                method: 'DELETE'
+              });
+              await loadOptions();
+            } catch (err) {
+              alert(t('common.error', 'Error: ') + err.message);
+            }
+          });
+        });
+      } else {
+        tbody.innerHTML = `<tr><td colspan="5" class="no-logs" data-i18n="questions_create.no_options_yet_table">${t('questions_create.no_options_yet_table', 'No options yet')}</td></tr>`;
+      }
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+    }
+
+    document.getElementById('addOptionBtn').addEventListener('click', async () => {
+      if (!currentQuestionId) return alert(t('questions_create.create_first', 'Create a question first'));
+      const label = document.getElementById('optLabel').value.trim();
+      if (!label) return alert(t('questions_create.label_required_alert', 'Label required'));
+      const data = {
+        label,
+        emoji: document.getElementById('optEmoji').value.trim() || null,
+        answerText: document.getElementById('optAnswerText').value.trim() || null,
+        answerNumber: document.getElementById('optAnswerNumber').value ? parseFloat(document.getElementById('optAnswerNumber').value) : null,
+        style: document.getElementById('optStyle').value
+      };
+      try {
+        await apiFetch(`/api/guilds/${guildId}/questions/${currentQuestionId}/options`, {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+        document.getElementById('optLabel').value = '';
+        document.getElementById('optEmoji').value = '';
+        document.getElementById('optAnswerText').value = '';
+        document.getElementById('optAnswerNumber').value = '';
+        await loadOptions();
+      } catch (err) {
+        alert(t('common.error', 'Error: ') + err.message);
+      }
+    });
+
+    // Initial preview
+    updatePreview();
+  })();
+</script>

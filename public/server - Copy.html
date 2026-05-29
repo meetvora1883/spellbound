@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Server Management – Warboard</title>
+  <link rel="icon" href="/favicon.ico">
+  <script src="/favicon.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root{
+      --bg0:#071027;
+      --bg1:#0b1736;
+      --panel: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.10);
+      --text:#e7eefc;
+      --muted:#9aa8c7;
+      --accent:#5b6bff;
+      --accent2:#7c5cff;
+      --good:#22c55e;
+      --shadow: 0 16px 40px rgba(0,0,0,.45);
+      --r: 16px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+    html,body{height:100%}
+    body{
+      min-height:100vh;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(124,92,255,.25), transparent 60%),
+        radial-gradient(900px 500px at 85% 35%, rgba(91,107,255,.20), transparent 60%),
+        radial-gradient(1100px 700px at 60% 100%, rgba(34,197,94,.12), transparent 65%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      display:flex;
+      flex-direction:column;
+    }
+    a{color:inherit;text-decoration:none}
+    .layout{display:flex;flex:1;min-height:0;}
+
+    /* TOP BAR */
+    .topbar{
+      height:62px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 20px;
+      background:rgba(255,255,255,.06);
+      border-bottom:1px solid rgba(255,255,255,.10);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(14px);
+    }
+
+    
+    .top-left{display:flex;align-items:center;gap:12px;}
+    .sidebar-toggle{
+      width:34px;height:34px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(15,23,42,.7);
+      color:var(--text);
+      display:grid;place-items:center;
+      cursor:pointer;
+      font-size:18px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:700;
+      letter-spacing:.6px;
+    }
+    .brand .logo{
+      width:28px;height:28px;
+      border-radius:10px;
+      background:linear-gradient(135deg, rgba(124,92,255,.95), rgba(91,107,255,.95));
+      border:1px solid rgba(255,255,255,.18);
+      background-size: cover;
+      background-position: center;
+    }
+    .brand span{font-size:13px;text-transform:uppercase;}
+
+    .top-right{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted);}
+    .icon-btn {
+      background: rgba(255,255,255,.1);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 6px 10px;
+      transition: background 0.2s;
+      margin-right: 8px;
+    }
+    .icon-btn:hover {
+      background: rgba(255,255,255,.2);
+    }
+
+    /* Server dropdown */
+    .server-wrap{position:relative;}
+    .server-btn{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 12px;
+      border-radius:999px;
+      background:rgba(15,23,42,.85);
+      border:1px solid rgba(148,163,184,.35);
+      cursor:pointer;
+      color:var(--text);
+      font-size:13px;
+      max-width:250px;
+    }
+    .server-btn .server-icon{
+      width:20px;height:20px;
+      border-radius:50%;
+      background-size: cover;
+      background-position: center;
+      flex-shrink:0;
+    }
+    .server-btn .server-name{
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex:1;
+    }
+    .server-btn .chevron{font-size:10px;margin-left:4px;}
+    .server-dropdown{
+      position:absolute;
+      left:0;
+      top:calc(100% + 6px);
+      min-width:240px;
+      max-height:320px;
+      overflow-y:auto;
+      background:rgba(15,23,42,.98);
+      border:1px solid rgba(148,163,184,.45);
+      border-radius:12px;
+      box-shadow:var(--shadow);
+      padding:6px 0;
+      display:none;
+      z-index:25;
+    }
+    .server-dropdown.open{display:block;}
+    .server-dropdown-item{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      cursor:pointer;
+      color:var(--text);
+      font-size:13px;
+    }
+    .server-dropdown-item:hover{background:rgba(31,41,55,.9);}
+    .server-dropdown-item.active{background:rgba(91,107,255,.25);}
+    .server-dropdown-item .srv-icon{
+      width:28px;height:28px;
+      border-radius:8px;
+      background-size: cover;
+      background-position: center;
+      flex-shrink:0;
+    }
+
+    .user{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .user .mini{
+      width:34px;height:34px;
+      border-radius:999px;
+      background:linear-gradient(135deg, rgba(34,197,94,.95), rgba(91,107,255,.95));
+      border:1px solid rgba(255,255,255,.16);
+      background-size: cover;
+      background-position: center;
+      flex-shrink:0;
+    }
+    .user-menu-wrap{position:relative;}
+    .user-menu-btn{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:rgba(15,23,42,.6);
+      border:1px solid rgba(148,163,184,.3);
+      cursor:pointer;
+      color:var(--text);
+    }
+    .user-menu-btn .chevron{font-size:10px;}
+    .user-dropdown{
+      position:absolute;
+      right:0;
+      top:calc(100% + 6px);
+      min-width:160px;
+      background:rgba(15,23,42,.98);
+      border:1px solid rgba(148,163,184,.45);
+      border-radius:12px;
+      box-shadow:var(--shadow);
+      padding:6px 0;
+      display:none;
+      z-index:20;
+    }
+    .user-dropdown.open{display:block;}
+    .user-dropdown a{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      color:var(--text);
+      font-size:13px;
+    }
+    .user-dropdown a:hover{background:rgba(31,41,55,.9);}
+
+    /* SIDEBAR */
+    .sidebar{
+      width:240px;
+      flex-shrink:0;
+      background:rgba(15,23,42,.95);
+      border-right:1px solid rgba(148,163,184,.35);
+      display:flex;
+      flex-direction:column;
+      overflow-y:auto;
+      transition:width .2s ease, margin .2s ease;
+    }
+    body.sidebar-hidden .sidebar{
+      width:0;
+      min-width:0;
+      overflow:hidden;
+      border-right:none;
+    }
+    .sidebar-inner{padding:16px 12px 20px;}
+    .sidebar-cat{margin-bottom:6px;}
+    .sidebar-cat-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:8px 10px;
+      font-size:0.72rem;
+      letter-spacing:0.14em;
+      text-transform:uppercase;
+      color:#6b7280;
+      cursor:pointer;
+      border-radius:8px;
+      transition:background .12s;
+    }
+    .sidebar-cat-head:hover{background:rgba(31,41,55,.6);color:#9ca3af;}
+    .sidebar-cat-head .chevron{
+      font-size:10px;
+      transition:transform .2s ease;
+    }
+    .sidebar-cat-head.collapsed .chevron{transform:rotate(-90deg);}
+    .sidebar-cat-items{
+      margin-top:2px;
+      overflow:hidden;
+    }
+    .sidebar-cat.collapsed .sidebar-cat-items{display:none;}
+    .sidebar-item{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:8px;
+      color:#9ca3af;
+      cursor:pointer;
+      transition:background .12s, color .12s;
+      font-size:0.88rem;
+    }
+    .sidebar-item:hover{background:#0b1120;color:#e5e7eb;}
+    .sidebar-item.active{background:#111827;color:#e5e7eb;}
+    .sidebar-item .icon{font-size:1rem;}
+    .sidebar-footer{
+      margin-top:auto;
+      padding:14px 12px;
+      border-top:1px solid #111827;
+      font-size:0.75rem;
+      color:#6b7280;
+    }
+
+    /* Badge for pending count */
+    .badge {
+      background: var(--accent);
+      color: white;
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      margin-left: auto;
+    }
+
+    /* MAIN */
+    .main{
+      flex:1;
+      min-width:0;
+      padding:20px 24px 24px;
+      overflow:auto;
+    }
+    .content-row{
+      display:grid;
+      grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr);
+      gap:20px;
+      align-items:start;
+    }
+    .full-width{
+      display:block;
+    }
+    .full-width .panel{
+      width:100%;
+    }
+    @media(max-width:900px){.content-row{grid-template-columns:1fr;}}
+
+    .panel{
+      background:rgba(15,23,42,.9);
+      border-radius:var(--r);
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    .panel-head{
+      padding:14px 18px;
+      border-bottom:1px solid rgba(15,23,42,.9);
+      background:rgba(15,23,42,1);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-size:0.9rem;
+      font-weight:600;
+    }
+    .panel-head .badge{
+      font-size:0.7rem;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#111827;
+      color:#9ca3af;
+      font-weight:500;
+    }
+    .panel-body{padding:18px;}
+
+    .field-block{margin-bottom:18px;}
+    .field-block:last-child{margin-bottom:0;}
+    .field-title{font-size:0.95rem;font-weight:600;margin-bottom:4px;}
+    .field-desc{font-size:0.8rem;color:var(--muted);margin-bottom:10px;}
+    .field-row{display:flex;gap:10px;flex-wrap:wrap;}
+    .field-input{
+      flex:1;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(55,65,81,.9);
+      background:#030712;
+      color:var(--text);
+      font-size:0.88rem;
+      outline:none;
+      min-width:150px;
+    }
+    .field-input:focus{border-color:var(--accent);}
+    .btn{
+      padding:10px 18px;
+      border-radius:10px;
+      border:none;
+      cursor:pointer;
+      font-size:0.82rem;
+      font-weight:600;
+      transition:background .12s;
+      white-space:nowrap;
+    }
+    .btn-primary{background:var(--accent);color:#fff;}
+    .btn-primary:hover{background:var(--accent2);}
+    .btn-success{background:var(--good);color:#fff;}
+    .btn-success:hover{background:#16a34a;}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+    .table-toolbar{
+      padding:10px 14px;
+      border-bottom:1px solid #111827;
+      background:#020617;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .table-toolbar select{
+      padding:4px 8px;
+      border-radius:6px;
+      border:1px solid #374151;
+      background:#020617;
+      color:#e5e7eb;
+    }
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+    th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #111827;}
+    th{background:#020617;color:#cbd5f5;}
+    td{color:var(--text);}
+    tbody tr:hover td{background:rgba(255,255,255,.02);}
+    .no-logs{
+      text-align:center;
+      padding:30px;
+      color:var(--muted);
+      font-style:italic;
+    }
+    .error-message{
+      color:#ff6b6b;
+      text-align:center;
+      padding:20px;
+    }
+    .loading{
+      text-align:center;
+      padding:40px;
+      color:var(--muted);
+    }
+    .content-iframe {
+      width:100%;
+      border:none;
+      min-height:600px;
+      background:transparent;
+    }
+      
+    .guild-card:hover {
+      background: rgba(255,255,255,.1);
+    }
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+    }
+    .danger {
+      background: #dc3545;
+    }
+    .danger:hover {
+      background: #c82333;
+    }
+      
+    .primary {
+      background: var(--accent);
+    }
+    .primary:hover {
+      background: var(--accent2);
+    }
+    .loading, .no-logs {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-style: italic;
+    }
+    .error-message {
+      color: #ff6b6b;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* Theme styling for dropdown menus */
+    select {
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239aa8c7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+    }
+    select:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+      }
+    select option {
+      background: var(--bg1);
+      color: var(--text);
+    }
+    select::-ms-expand {
+      display: none;
+    }
+
+    /* ========== THEMED SCROLLBAR ========== */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent) rgba(0,0,0,0.3);
+    }
+    *::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    *::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.3);
+      border-radius: 4px;
+    }
+    *::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border-radius: 4px;
+    }
+    *::-webkit-scrollbar-thumb:hover {
+      background: var(--accent2);
+    }
+    body {
+      user-select: none;
+    }
+    input, textarea, [contenteditable="true"] {
+      user-select: text;
+    }
+      
+      
+      /* Remove blue highlight (mobile + desktop) */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Remove focus outline globally */
+*:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Optional: only for clickable UI (safer) */
+button,
+.server-btn,
+.sidebar-item,
+.icon-btn,
+.user-menu-btn {
+  outline: none;
+}
+
+button:focus,
+.server-btn:focus,
+.sidebar-item:focus,
+.icon-btn:focus,
+.user-menu-btn:focus {
+  outline: none;
+  box-shadow: none;
+      }
+      
+      
+      
+      
+/* Button */
+.button {
+  position: relative;
+  padding: 12px 28px;
+  border-radius: 8px;
+  background: #5b6bff;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.3s ease;
+}
+
+/* Hover */
+.button:hover {
+  background: #4c5af0;
+}
+
+/* Ripple circle */
+.button::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  left: var(--mouse-x);
+  top: var(--mouse-y);
+  transform: translate(-50%, -50%);
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
+/* On click */
+.button:active::after {
+  width: 200px;
+  height: 200px;
+      }
+   
+
+      /* ========== GLOWING BUTTON (FIXED) ========== */
+.glow-btn {
+  position: relative;
+  z-index: 0;
+  border: none;
+  outline: none;
+  color: #fff;
+  background: #111;           /* solid background behind text */
+  cursor: pointer;
+  border-radius: 10px;
+  /* overflow: hidden;        ❌ REMOVED – it clipped the glow */
+  padding: 10px 24px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+/* ONLY ONE ::before – the colourful glow layer (no ::after) */
+.glow-btn::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  background: linear-gradient(45deg,
+    #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5,
+    #002bff, #7a00ff, #ff00c8, #ff0000);
+  background-size: 400%;
+  border-radius: inherit;
+  z-index: -1;
+  filter: blur(5px);
+  animation: glowing 20s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.glow-btn:hover::before {
+  opacity: 1;
+}
+
+@keyframes glowing {
+  0%   { background-position: 0 0; }
+  50%  { background-position: 400% 0; }
+  100% { background-position: 0 0; }
+}
+      
+
+      
+      
+      
+  </style>
+</head>
+<body>
+  <!-- Member Switcher Modal -->
+  <div id="memberSwitcherModal" class="modal" style="display:none;">
+    <div class="modal-content" style="width: 500px; max-width: 90%;">
+      <div class="modal-header">
+        <h3>Select a Member</h3>
+        <span class="close-modal" onclick="closeMemberSwitcher()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="memberSearch" class="field-input" placeholder="Search by name..." style="margin-bottom: 15px;">
+        <div id="memberList" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--stroke); border-radius: 8px; padding: 8px;"></div>
+        <div id="memberLoading" class="loading" style="display:none;">Loading members...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeMemberSwitcher()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="top-left">
+      <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">≡</button>
+      <div class="brand">
+        <div class="logo" id="botAvatar"></div>
+        <span id="botName">Loading...</span>
+      </div>
+    </div>
+    <div class="top-right">
+      <!-- Member switcher button (owner only) -->
+      <button class="icon-btn" id="memberSwitcherBtn" title="Select a member" style="display:none;">
+        <i class="fas fa-user-friends"></i>
+      </button>
+      <!-- Member Panel button (owner only) -->
+      <button class="icon-btn" id="memberPanelBtn" title="Go to Member Panel" style="display:none;">
+        <i class="fas fa-user"></i>
+      </button>
+      <div class="server-wrap">
+        <button class="server-btn" id="serverBtn">
+          <span class="server-icon" id="currentServerIcon"></span>
+          <span class="server-name" id="currentServerName">Loading...</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="server-dropdown" id="serverDropdown"></div>
+      </div>
+      <div class="user">
+        <div class="mini" id="userAvatar"></div>
+        <div class="user-menu-wrap">
+          <button class="user-menu-btn" id="userMenuBtn">
+            <span id="username">Loading...</span>
+            <span class="chevron">▾</span>
+          </button>
+          <div class="user-dropdown" id="userDropdown">
+            <a href="/dashboard.html">🖥️ Servers</a>
+            <a href="/login.html">🚪 Log out</a>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="lang-select" style="position:relative;">
+ <select id="userLangSelect" class="lang-select-dropdown" style="
+    background:rgba(0,0,0,.3);
+    border:1px solid var(--stroke);
+    border-radius:8px;
+    padding:6px 10px;
+    color:var(--text);
+    font-size:0.85rem;
+    cursor:pointer;
+    outline:none;
+  ">
+    <option value="en">EN</option>
+    <option value="hi">HI</option>
+    
+
+
+
+    <!-- add any languages you've prepared -->
+  </select>
+</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-inner">
+        <div class="sidebar-cat" data-cat="bot">
+          <div class="sidebar-cat-head">
+            <span>⚙️ Bot settings</span>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="sidebar-cat-items">
+            <div class="sidebar-item active" data-section="settings">
+              <span class="icon">⚙️</span>
+              <span>Bot settings</span>
+            </div>
+            <div class="sidebar-item" data-section="logs">
+              <span class="icon">📜</span>
+              <span>Activity logs</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-cat" data-cat="warboard">
+          <div class="sidebar-cat-head">
+            <span>📋 Warboard</span>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="sidebar-cat-items">
+            
+            <div class="sidebar-item" data-section="warboard-assign">
+              <span class="icon">📝</span>
+              <span>Assignments</span>
+            </div>
+            <div class="sidebar-item" data-section="warboard-create">
+              <span class="icon">📅</span>
+              <span>Warboards create</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-cat" data-cat="greetings">
+          <div class="sidebar-cat-head">
+            <span>👋 Greetings</span>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="sidebar-cat-items">
+            <div class="sidebar-item" data-section="greetings-setup">
+              <span class="icon">⚙️</span>
+              <span>Setup</span>
+            </div>
+            <div class="sidebar-item" data-section="greetings-status">
+              <span class="icon">📊</span>
+              <span>Status</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-cat" data-cat="might">
+          <div class="sidebar-cat-head">
+            <span>📈 Might</span>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="sidebar-cat-items">
+            <div class="sidebar-item" data-section="might-history">🗂️ History</div>
+            
+            <!-- Approvals subcategory (admin only, shows pending badge) -->
+            <div class="sidebar-item" id="approvalsItem" data-section="pending-approvals" style="display: none;">
+              <span class="icon">⏳</span>
+              <span>Approvals</span>
+              <span class="badge" id="pendingCount" style="display: none;">0</span>
+            </div>
+          </div>
+        </div>
+
+          
+          
+          
+          
+          
+          
+  <div class="sidebar-cat" data-cat="questions">
+  <div class="sidebar-cat-head">
+    <span>📊 Questions</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="sidebar-cat-items">
+    <div class="sidebar-item" data-section="questions-create">
+      <span class="icon">➕</span>
+      <span>Create Question</span>
+    </div>
+    <div class="sidebar-item" data-section="questions-manage">
+      <span class="icon">📋</span>
+      <span>Manage Questions</span>
+    </div>
+  </div>
+          </div>        
+
+          
+          <!-- Inside the sidebar -->
+<div class="sidebar-cat" data-cat="pin">
+  <div class="sidebar-cat-head">
+    <span>📌 Pin Messages</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="sidebar-cat-items">
+    <div class="sidebar-item" data-section="pin-manage">
+      <span class="icon">📌</span>
+      <span>Manage Channels</span>
+    </div>
+  </div>
+</div>
+          
+          
+          
+          
+          
+          
+          
+          
+        <div class="sidebar-cat" data-cat="owner" id="ownerCat" style="display:none;">
+          <div class="sidebar-cat-head">
+            <span>👑 Owner</span>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="sidebar-cat-items">
+            <div class="sidebar-item" data-section="owner-users">
+              <span class="icon">👥</span>
+              <span>Web Users</span>
+            </div>
+            <div class="sidebar-item" data-section="owner-guilds">
+              <span class="icon">🌐</span>
+              <span>Bot Guilds</span>
+            </div>
+            <div class="sidebar-item" data-section="owner-online">
+              <span class="icon">🟢</span>
+              <span>Online Members</span>
+            </div>
+            
+          </div>
+          <div class="sidebar-item" data-section="owner-forum-guide">
+  <span class="icon">📘</span>
+  <span>Forum Guide</span>
+</div>
+        </div>
+
+        <div class="sidebar-footer">
+          Logged in as <b id="footerUsername">Loading...</b>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="mainContent">
+      <!-- Default two-column view (settings + logs) -->
+      <div class="content-row" id="defaultView">
+        <section class="panel">
+          <div class="panel-head">
+            <span>⚙️ Bot Settings</span>
+            <span class="badge">Settings</span>
+          </div>
+          <div class="panel-body">
+            <div class="field-block">
+              <div class="field-title">Nickname</div>
+              <div class="field-desc">Set the bot's display name in this server.</div>
+              <div class="field-row">
+                <input class="field-input" type="text" id="botNickname" placeholder="Bot nickname" />
+                <button class="btn btn-primary" id="applyNickname" disabled>Apply</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <span>📜 Activity Logs</span>
+            <span class="badge">Logs</span>
+          </div>
+          <div class="panel-body" style="padding:0;">
+            <div class="table-toolbar">
+              <span>Recent actions</span>
+              <label>
+                Records:
+                <select id="logLimit">
+                  <option>10</option>
+                  <option>25</option>
+                  <option>50</option>
+                </select>
+              </label>
+            </div>
+            <div class="table-wrap">
+              <table id="logsTable">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="logsBody">
+                  <tr><td colspan="4" class="loading">Loading logs...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="confirmTitle">Confirm Action</h3>
+        <span class="close-modal" onclick="closeConfirmModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn btn-primary" id="confirmOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="notificationToast" class="notification-toast">
+    <span id="notificationMessage"></span>
+  </div>
+
+  <style>
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: rgba(15,23,42,0.98);
+      border: 1px solid rgba(148,163,184,0.45);
+      border-radius: 12px;
+      width: 400px;
+      max-width: 90%;
+      box-shadow: var(--shadow);
+      color: var(--text);
+    }
+    .modal-header {
+      padding: 16px;
+      border-bottom: 1px solid rgba(148,163,184,0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .close-modal {
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .close-modal:hover {
+      color: var(--text);
+    }
+    .modal-body {
+      padding: 20px 16px;
+    }
+    .modal-footer {
+      padding: 16px;
+      border-top: 1px solid rgba(148,163,184,0.2);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: var(--text);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .notification-toast {
+      position: fixed;
+      top: 20px;
+      right: -400px;
+      background-color: #22c55e;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      font-weight: 500;
+      z-index: 9999;
+      transition: right 0.4s ease-in-out;
+      max-width: 350px;
+      word-wrap: break-word;
+      border-left: 4px solid #15803d;
+      pointer-events: none;
+      user-select: none;
+    }
+    .notification-toast.show {
+      right: 20px;
+    }
+
+
+    .scheduled-row {
+    opacity: 0.6;
+    font-style: italic;
+  }
+  .status-icon {
+    margin-right: 4px;
+  }
+  </style>
+
+  <script>
+  const buttons = document.querySelectorAll('.button');
+
+buttons.forEach(button => {
+  button.addEventListener('mousemove', e => {
+    const rect = button.getBoundingClientRect();
+    button.style.setProperty('--mouse-x', (e.clientX - rect.left) + "px");
+    button.style.setProperty('--mouse-y', (e.clientY - rect.top) + "px");
+  });
+});
+      
+      
+      
+      
+      // Global error handler
+    
+      
+      
+      
+      
+      window.onerror = function(msg, url, line) {
+      console.error('Global error:', msg, 'at', line);
+      return false;
+    };
+
+    // ==================== GLOBAL HELPERS ====================
+    const socket = io();
+
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (res.status === 401) {
+        window.location.href = '/login.html';
+        return null;
+      }
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text}`);
+      }
+      return res.json();
+    }
+
+    // Modal helpers
+    let confirmResolve = null;
+    function showConfirmModal(title, message) {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      document.getElementById('confirmModal').style.display = 'flex';
+      return new Promise((resolve) => {
+        confirmResolve = resolve;
+      });
+    }
+    function closeConfirmModal() {
+      document.getElementById('confirmModal').style.display = 'none';
+      if (confirmResolve) {
+        confirmResolve(false);
+        confirmResolve = null;
+      }
+    }
+    document.getElementById('confirmOkBtn')?.addEventListener('click', function() {
+      document.getElementById('confirmModal').style.display = 'none';
+      if (confirmResolve) {
+        confirmResolve(true);
+        confirmResolve = null;
+      }
+    });
+
+    function showNotification(message, duration = 3000) {
+      const toast = document.getElementById('notificationToast');
+      const msgSpan = document.getElementById('notificationMessage');
+      msgSpan.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    // ==================== PAGE INITIALISATION ====================
+    let guildId = null;
+    let user = null;
+    let userGuilds = [];
+    let botUser = null;
+    let originalNickname = '';
+    window.isOwner = false; // global for member switcher
+
+    // Dropdown management
+    function closeAllDropdowns() {
+      document.getElementById('serverDropdown').classList.remove('open');
+      document.getElementById('userDropdown').classList.remove('open');
+    }
+
+    async function loadUser() {
+      try {
+        user = await apiFetch('/auth/me');
+        if (!user) return;
+        document.getElementById('username').textContent = user.username;
+        document.getElementById('footerUsername').textContent = user.username;
+        if (user.avatar) {
+          document.getElementById('userAvatar').style.backgroundImage = `url(https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png)`;
+        }
+        // Check if owner
+        if (user.id === '1342054101399375875') { // REPLACE WITH YOUR OWNER_ID
+          window.isOwner = true;
+        }
+      } catch (err) {
+        console.error('loadUser error:', err);
+      }
+    }
+
+    async function loadGuilds() {
+      try {
+        userGuilds = await apiFetch('/api/user/guilds-details') || [];
+        const dropdown = document.getElementById('serverDropdown');
+        dropdown.innerHTML = '';
+        userGuilds.forEach(g => {
+          if (!g.hasBot) return;
+          const item = document.createElement('div');
+          item.className = 'server-dropdown-item' + (g.id === guildId ? ' active' : '');
+          item.setAttribute('data-id', g.id);
+          item.setAttribute('data-name', g.name);
+          item.setAttribute('data-icon', g.icon || '');
+          item.innerHTML = `
+            <div class="srv-icon" style="background-image: ${g.icon ? `url(https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png)` : 'none'}"></div>
+            ${g.name}
+          `;
+          item.addEventListener('click', () => {
+            if (g.id === guildId) return;
+            window.location.href = `/server.html?guild=${g.id}`;
+          });
+          dropdown.appendChild(item);
+        });
+
+        const current = userGuilds.find(g => g.id === guildId);
+        if (current) {
+          document.getElementById('currentServerName').textContent = current.name;
+          if (current.icon) {
+            document.getElementById('currentServerIcon').style.backgroundImage = `url(https://cdn.discordapp.com/icons/${current.id}/${current.icon}.png)`;
+          }
+        } else {
+          alert('You do not have access to this server');
+          window.location.href = '/dashboard.html';
+        }
+      } catch (err) {
+        console.error('loadGuilds error:', err);
+      }
+    }
+
+    async function loadBotInfo() {
+      try {
+        botUser = await apiFetch('/api/bot/info');
+        if (botUser) {
+          document.getElementById('botName').textContent = botUser.username;
+          if (botUser.avatar) {
+            document.getElementById('botAvatar').style.backgroundImage = `url(${botUser.avatar})`;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load bot info:', err);
+      }
+    }
+
+    async function loadBotNickname() {
+      try {
+        const data = await apiFetch(`/api/guilds/${guildId}/bot-nickname`);
+        let nick = data?.nickname;
+        if (!nick && botUser) nick = botUser.username;
+        document.getElementById('botNickname').value = nick || 'Warboard Bot';
+        originalNickname = nick || 'Warboard Bot';
+        document.getElementById('applyNickname').disabled = true;
+      } catch (err) {
+        console.error('Failed to load bot nickname:', err);
+        const fallback = botUser?.username || 'Warboard Bot';
+        document.getElementById('botNickname').value = fallback;
+        originalNickname = fallback;
+        document.getElementById('applyNickname').disabled = true;
+      }
+    }
+
+    async function loadLogs(limit = 10) {
+      const tbody = document.getElementById('logsBody');
+      try {
+        const logs = await apiFetch(`/api/guilds/${guildId}/logs?limit=${limit}`);
+        tbody.innerHTML = '';
+        if (logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="no-logs">No logs available</td></tr>';
+        } else {
+          logs.forEach(log => {
+            const tr = document.createElement('tr');
+            const time = new Date(log.timestamp).toLocaleString();
+            tr.innerHTML = `<td>${time}</td><td>${log.username}</td><td>${log.action}</td><td>${log.details || ''}</td>`;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" class="error-message">Error loading logs: ${err.message}</td></tr>`;
+      }
+    }
+
+    // Restore the default two‑column view
+    function restoreDefaultView() {
+      const main = document.getElementById('mainContent');
+      main.innerHTML = `
+        <div class="content-row">
+          <section class="panel">
+            <div class="panel-head">
+              <span>⚙️ Bot Settings</span>
+              <span class="badge">Settings</span>
+            </div>
+            <div class="panel-body">
+              <div class="field-block">
+                <div class="field-title">Nickname</div>
+                <div class="field-desc">Set the bot's display name in this server.</div>
+                <div class="field-row">
+                  <input class="field-input" type="text" id="botNickname" placeholder="Bot nickname" />
+                  <button class="btn btn-primary" id="applyNickname" disabled>Apply</button>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <span>📜 Activity Logs</span>
+              <span class="badge">Logs</span>
+            </div>
+            <div class="panel-body" style="padding:0;">
+              <div class="table-toolbar">
+                <span>Recent actions</span>
+                <label>
+                  Records:
+                  <select id="logLimit">
+                    <option>10</option>
+                    <option>25</option>
+                    <option>50</option>
+                  </select>
+                </label>
+              </div>
+              <div class="table-wrap">
+                <table id="logsTable">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>User</th>
+                      <th>Action</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody id="logsBody">
+                    <tr><td colspan="4" class="loading">Loading logs...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+      `;
+      // Re-attach event listeners
+      document.getElementById('logLimit').addEventListener('change', (e) => loadLogs(parseInt(e.target.value)));
+      loadLogs(10);
+      const newNicknameInput = document.getElementById('botNickname');
+      const newApplyBtn = document.getElementById('applyNickname');
+      newNicknameInput.value = originalNickname;
+      newApplyBtn.disabled = true;
+      newNicknameInput.addEventListener('input', () => {
+        if (newNicknameInput.value !== originalNickname) {
+          newApplyBtn.disabled = false;
+          newApplyBtn.classList.remove('btn-primary');
+          newApplyBtn.classList.add('btn-success');
+        } else {
+          newApplyBtn.disabled = true;
+          newApplyBtn.classList.add('btn-primary');
+          newApplyBtn.classList.remove('btn-success');
+        }
+      });
+      newApplyBtn.addEventListener('click', async () => {
+        const newNick = newNicknameInput.value.trim();
+        if (newNick === originalNickname) return;
+        newApplyBtn.disabled = true;
+        newApplyBtn.textContent = 'Saving...';
+        try {
+          await apiFetch(`/api/guilds/${guildId}/bot-nickname`, {
+            method: 'POST',
+            body: JSON.stringify({ nickname: newNick || null })
+          });
+          originalNickname = newNick;
+          await loadLogs(parseInt(document.getElementById('logLimit').value));
+          newApplyBtn.textContent = 'Apply';
+          newApplyBtn.classList.remove('btn-success');
+          newApplyBtn.classList.add('btn-primary');
+        } catch (err) {
+          alert('Failed to change nickname: ' + err.message);
+          newApplyBtn.disabled = false;
+          newApplyBtn.textContent = 'Apply';
+        }
+      });
+    }
+
+    // Sidebar toggle
+    document.getElementById('sidebarToggle').addEventListener('click', function(){
+      document.body.classList.toggle('sidebar-hidden');
+    });
+
+    // Category collapse
+    document.querySelectorAll('.sidebar-cat-head').forEach(function(head){
+      head.addEventListener('click', function(e){
+        e.stopPropagation();
+        const cat = head.closest('.sidebar-cat');
+        cat.classList.toggle('collapsed');
+        head.classList.toggle('collapsed');
+      });
+    });
+
+    // Server dropdown toggle
+    const serverBtn = document.getElementById('serverBtn');
+    const serverDropdown = document.getElementById('serverDropdown');
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userDropdown = document.getElementById('userDropdown');
+
+    serverBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      userDropdown.classList.remove('open');
+      serverDropdown.classList.toggle('open');
+    });
+
+    userMenuBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      serverDropdown.classList.remove('open');
+      userDropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function(){
+      closeAllDropdowns();
+    });
+
+    // Nickname input change
+    const nicknameInput = document.getElementById('botNickname');
+    const applyBtn = document.getElementById('applyNickname');
+
+    nicknameInput.addEventListener('input', () => {
+      if (nicknameInput.value !== originalNickname) {
+        applyBtn.disabled = false;
+        applyBtn.classList.remove('btn-primary');
+        applyBtn.classList.add('btn-success');
+      } else {
+        applyBtn.disabled = true;
+        applyBtn.classList.add('btn-primary');
+        applyBtn.classList.remove('btn-success');
+      }
+    });
+
+    applyBtn.addEventListener('click', async () => {
+      const newNick = nicknameInput.value.trim();
+      if (newNick === originalNickname) return;
+      applyBtn.disabled = true;
+      applyBtn.textContent = 'Saving...';
+      try {
+        await apiFetch(`/api/guilds/${guildId}/bot-nickname`, {
+          method: 'POST',
+          body: JSON.stringify({ nickname: newNick || null })
+        });
+        originalNickname = newNick;
+        await loadLogs(parseInt(document.getElementById('logLimit').value));
+        applyBtn.textContent = 'Apply';
+        applyBtn.classList.remove('btn-success');
+        applyBtn.classList.add('btn-primary');
+      } catch (err) {
+        alert('Failed to change nickname: ' + err.message);
+        applyBtn.disabled = false;
+        applyBtn.textContent = 'Apply';
+      }
+    });
+
+    // Log limit change
+    document.getElementById('logLimit').addEventListener('change', (e) => {
+      loadLogs(parseInt(e.target.value));
+    });
+
+    // Owner check (sets window.isOwner and shows owner-only buttons)
+    async function checkOwner() {
+  if (window.isOwner) {
+    document.getElementById('ownerCat').style.display = '';
+    document.getElementById('memberPanelBtn').style.display = '';      // show
+    document.getElementById('memberSwitcherBtn').style.display = '';   // show
+
+    // ✅ attach both click handlers here (after they’re visible)
+    document.getElementById('memberPanelBtn').addEventListener('click', () => {
+      window.location.href = `/members-server.html?guild=${guildId}`;
+    });
+
+    document.getElementById('memberSwitcherBtn').addEventListener('click', openMemberSwitcher);
+  }
+}
+
+    // ========== ADMIN CHECK & PENDING BADGE ==========
+    async function checkIfAdmin() {
+      try {
+        const { isAdmin } = await apiFetch(`/api/guilds/${guildId}/is-admin`);
+        const approvalsItem = document.getElementById('approvalsItem');
+        if (isAdmin) {
+          approvalsItem.style.display = 'flex';
+          await updatePendingBadge();
+        } else {
+          approvalsItem.style.display = 'none';
+        }
+      } catch (err) {
+        console.error('Failed to check admin status:', err);
+      }
+    }
+
+    async function updatePendingBadge() {
+      try {
+        const pending = await apiFetch(`/api/might/pending?guildId=${guildId}`);
+        const count = pending.length;
+        const badge = document.getElementById('pendingCount');
+        if (count > 0) {
+          badge.textContent = count;
+          badge.style.display = '';
+        } else {
+          badge.style.display = 'none';
+        }
+      } catch (err) {
+        console.error('Failed to load pending count:', err);
+      }
+    }
+
+    socket.on('submissionUpdated', (data) => {
+      if (data.guildId === guildId) {
+        updatePendingBadge();
+      }
+    });
+
+    // ========== MEMBER SWITCHER (owner only) ==========
+    let allMembers = [];
+
+    async function loadAllMembers() {
+      allMembers = [];
+      let after = null;
+      let hasMore = true;
+      document.getElementById('memberLoading').style.display = 'block';
+      while (hasMore) {
+        let url = `/api/guilds/${guildId}/members?limit=100`;
+        if (after) url += `&after=${after}`;
+        try {
+          const res = await fetch(url, { credentials: 'include' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          allMembers = allMembers.concat(data.members);
+          after = data.next;
+          hasMore = data.hasMore;
+        } catch (err) {
+          console.error('Failed to load members:', err);
+          document.getElementById('memberList').innerHTML = `<div class="error-message">Error: ${err.message}</div>`;
+          document.getElementById('memberLoading').style.display = 'none';
+          return;
+        }
+      }
+      document.getElementById('memberLoading').style.display = 'none';
+      renderMemberList();
+    }
+
+    function renderMemberList() {
+      const search = document.getElementById('memberSearch').value.toLowerCase();
+      const filtered = allMembers.filter(m => 
+        (m.username && m.username.toLowerCase().includes(search)) ||
+        (m.nickname && m.nickname.toLowerCase().includes(search))
+      );
+      const list = document.getElementById('memberList');
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="info-msg" style="padding:20px;">No members found</div>';
+        return;
+      }
+      list.innerHTML = filtered.map(m => `
+        <div class="member-item" data-id="${m.id}" data-username="${m.username}" style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid var(--stroke); cursor:pointer;">
+          <img src="${m.avatar ? `https://cdn.discordapp.com/avatars/${m.id}/${m.avatar}.png` : ''}" style="width:32px; height:32px; border-radius:50%; background:#333;">
+          <div style="flex:1;">
+            <div style="font-weight:600;">${m.nickname || m.username}</div>
+            <div style="font-size:0.8rem; color:var(--muted);">${m.username}</div>
+          </div>
+        </div>
+      `).join('');
+      document.querySelectorAll('.member-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = item.dataset.id;
+          const username = item.dataset.username;
+          navigator.clipboard.writeText(`${id} - ${username}`).then(() => {
+            showNotification(`Copied: ${id} - ${username}`, 3000);
+          }).catch(() => {
+            alert(`ID: ${id}\nUsername: ${username}`);
+          });
+        });
+      });
+    }
+
+    function openMemberSwitcher() {
+      document.getElementById('memberSwitcherModal').style.display = 'flex';
+      document.getElementById('memberList').innerHTML = '';
+      document.getElementById('memberSearch').value = '';
+      loadAllMembers();
+    }
+
+    function closeMemberSwitcher() {
+      document.getElementById('memberSwitcherModal').style.display = 'none';
+    }
+
+    // Attach event listeners only if owner
+    if (window.isOwner) {
+      document.getElementById('memberSwitcherBtn').addEventListener('click', openMemberSwitcher);
+    }
+    document.getElementById('memberSearch')?.addEventListener('input', renderMemberList);
+    document.getElementById('memberSwitcherModal')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeMemberSwitcher();
+    });
+
+    // Member Panel button click (owner only)
+    if (window.isOwner) {
+      document.getElementById('memberPanelBtn').addEventListener('click', () => {
+        window.location.href = `/members-server.html?guild=${guildId}`;
+      });
+    }
+
+    // Sidebar navigation
+    document.querySelectorAll('.sidebar-item[data-section]').forEach(item => {
+      item.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const section = item.dataset.section;
+
+        if (section === 'settings' || section === 'logs') {
+          restoreDefaultView();
+          document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+          return;
+        }
+
+        const main = document.getElementById('mainContent');
+        let url = '';
+
+        switch(section) {
+          
+          case 'warboard-assign':
+            url = '/partials/warboard-assign.html';
+            break;
+          case 'warboard-create':
+            url = '/partials/warboard-create.html';
+            break;
+          case 'owner-users':
+            url = '/partials/owner-web-users.html';
+            break;
+          case 'owner-guilds':
+            url = '/partials/bot-guilds.html';
+            break;
+          case 'owner-online':
+            url = `/partials/online-members.html?guild=${guildId}`;
+            break;
+          case 'greetings-setup':
+            url = '/partials/greetings-setup.html';
+            break;
+          case 'greetings-status':
+            url = '/partials/greetings-status.html';
+            break;
+          case 'might-history':
+            url = '/partials/might-history.html';
+            break;
+          case 'might-compare':
+            url = '/partials/might-compare.html';
+            break;
+          case 'pending-approvals':
+            url = '/partials/pending-approvals.html';
+            break;
+                
+              case 'questions-create':
+  url = '/partials/questions-create.html';
+  break;
+case 'questions-manage':
+  url = '/partials/questions-manage.html';
+  break;
+  case 'owner-forum-guide':
+  url = '/partials/owner-forum-guide.html';
+  break;       
+  case 'pin-manage':
+  url = '/partials/pinmsg-manage.html';
+  break;
+
+
+
+                
+                
+          default:
+            return;
+        }
+
+        main.innerHTML = '<div class="loading">Loading...</div>';
+
+        try {
+          const response = await fetch(url + (url.includes('?') ? '&' : '?') + `guild=${guildId}`);
+          const html = await response.text();
+          main.innerHTML = html;
+          Array.from(main.querySelectorAll('script')).forEach(oldScript => {
+            const newScript = document.createElement('script');
+            Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+          });
+        } catch (err) {
+          main.innerHTML = `<div class="error-message">Failed to load: ${err.message}</div>`;
+        }
+
+        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+
+    // Initialize
+    (async () => {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        guildId = urlParams.get('guild');
+        if (!guildId) {
+          alert('No guild selected');
+          window.location.href = '/dashboard.html';
+          return;
+        }
+
+        await loadUser();
+        await loadGuilds();
+        await loadBotInfo();
+        await loadBotNickname();
+        await loadLogs(10);
+        await checkOwner();      // shows owner buttons
+        await checkIfAdmin();    // shows admin approvals
+      } catch (err) {
+        console.error('Initialization error:', err);
+      }
+    })();
+
+
+    // Load the user's saved language
+async function loadUserLanguage() {
+  const data = await apiFetch('/api/user/language');
+  if (data && data.language) {
+    document.getElementById('userLangSelect').value = data.language;
+  }
+}
+
+// Save when the user changes it
+document.getElementById('userLangSelect').addEventListener('change', async (e) => {
+  const newLang = e.target.value;
+  await apiFetch('/api/user/language', {
+    method: 'PUT',
+    body: JSON.stringify({ language: newLang })
+  });
+  // Optional: reload the panel to apply translations immediately
+  location.reload();
+});
+
+// Call it after user is loaded
+(async () => {
+  // ... after loadUser() succeeds
+  await loadUserLanguage();
+})();
+  </script>
+</body>
+</html>

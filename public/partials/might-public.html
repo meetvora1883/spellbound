@@ -1,0 +1,62 @@
+<div class="might-public-panel">
+    <h2>Your Might History</h2>
+    <div id="userInfo"></div>
+    <canvas id="myMightChart" width="400" height="200"></canvas>
+    <h3>Submit New Might</h3>
+    <form id="submitForm">
+      <input type="text" id="inGameName" placeholder="Your in‑game name" required>
+      <input type="number" step="0.001" id="newMight" placeholder="Might value" required>
+      <button type="submit">Submit for Approval</button>
+    </form>
+    <div id="submitMessage"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    (async function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guildId = urlParams.get('guild');
+      if (!guildId) { alert('No guild specified'); return; }
+  
+      // Fetch current user info from JWT (we have req.user in API, but here we need to get it)
+      const me = await apiFetch('/auth/me');
+      document.getElementById('userInfo').innerText = `Logged in as ${me.username}`;
+  
+      // Load user's might history
+      const history = await apiFetch(`/api/guilds/${guildId}/might/history/${me.id}?limit=50`);
+      if (history.length) {
+        const labels = history.map(h => new Date(h.recorded_at).toLocaleDateString());
+        const data = history.map(h => h.might);
+        new Chart(document.getElementById('myMightChart'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Your Might',
+              data: data,
+              borderColor: 'rgb(91,107,255)',
+              tension: 0.1
+            }]
+          }
+        });
+      } else {
+        document.getElementById('myMightChart').style.display = 'none';
+        document.getElementById('userInfo').innerHTML += '<p>No history yet. Submit your first might below.</p>';
+      }
+  
+      document.getElementById('submitForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const inGameName = document.getElementById('inGameName').value;
+        const might = document.getElementById('newMight').value;
+        try {
+          await apiFetch('/api/might/submit', {
+            method: 'POST',
+            body: JSON.stringify({ guildId, inGameName, might })
+          });
+          document.getElementById('submitMessage').innerText = 'Submission sent for approval!';
+          document.getElementById('submitForm').reset();
+        } catch (err) {
+          document.getElementById('submitMessage').innerText = 'Error: ' + err.message;
+        }
+      });
+    })();
+  </script>

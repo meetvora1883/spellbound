@@ -1,0 +1,34 @@
+<section class="panel">
+  <div class="panel-head"><span>🖥️ Active Sessions</span></div>
+  <div class="panel-body">
+    <table class="table">
+      <thead><tr><th>User</th><th>IP</th><th>Browser</th><th>Last Active</th><th>Action</th></tr></thead>
+      <tbody id="sessionsBody"></tbody>
+    </table>
+  </div>
+</section>
+<script>
+(async function() {
+  const tbody = document.getElementById('sessionsBody');
+  async function load() {
+    try {
+      const data = await apiFetch('/api/admin/sessions');
+      tbody.innerHTML = data.map(s => `
+        <tr>
+          <td>${s.userId}</td>
+          <td>${s.data.ip || '?'}</td>
+          <td>${s.data.userAgent || '?'}</td>
+          <td>${new Date(s.createdAt).toLocaleString()}</td>
+          <td><button class="btn btn-sm btn-danger" onclick="terminateSession('${s.sessionId}')">Kick</button></td>
+        </tr>
+      `).join('');
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="5" class="error-message">${e.message}</td></tr>`; }
+  }
+  window.terminateSession = async (id) => {
+    if (!await showConfirmModal('Terminate session', 'Are you sure?')) return;
+    await apiFetch(`/api/admin/sessions/${id}`, { method: 'DELETE' });
+    load();
+  };
+  load();
+})();
+</script>

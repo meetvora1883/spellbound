@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IP Blocked</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; user-select: none; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: #fff; text-align: center;
+      background: #0a0a0a;
+    }
+    @keyframes warningPulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(255, 230, 0, 0.7)); }
+      50% { transform: scale(1.1); filter: drop-shadow(0 0 20px rgba(255, 230, 0, 1)); }
+    }
+    @keyframes textGlow {
+      0%, 100% { text-shadow: 0 0 8px rgba(255, 230, 0, 0.5), 0 0 2px rgba(255, 230, 0, 0.3); }
+      50% { text-shadow: 0 0 15px rgba(255, 230, 0, 0.8), 0 0 5px rgba(255, 230, 0, 0.5); }
+    }
+    @keyframes lightSpread {
+      0% { opacity: 0; transform: scale(0.1); }
+      15% { opacity: 0.8; }
+      100% { opacity: 0; transform: scale(4); }
+    }
+    @keyframes rotateCircle {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes pulseBorder {
+      0%, 100% { border-color: rgba(255, 230, 0, 0.15); box-shadow: 0 0 100px rgba(255, 230, 0, 0.3); }
+      50% { border-color: rgba(255, 230, 0, 0.25); box-shadow: 0 0 150px rgba(255, 230, 0, 0.6); }
+    }
+    .overlay {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      background: radial-gradient(circle at center, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.95) 100%);
+      overflow: hidden;
+    }
+    .light-spread {
+      position: absolute; width: 100%; height: 100%;
+      background: radial-gradient(circle at center, rgba(255, 230, 0, 0.6) 0%, rgba(255, 230, 0, 0.3) 20%, transparent 60%);
+      opacity: 0; animation: lightSpread 3s ease-out infinite; z-index: 1;
+    }
+    .logo {
+      position: absolute; width: 50vmin; height: 50vmin; border-radius: 50%;
+      border: 10px solid rgba(255, 230, 0, 0.1);
+      animation: rotateCircle 50s linear infinite, pulseBorder 4s ease-in-out infinite;
+      z-index: 2;
+    }
+    .warning-icon {
+      font-size: 48px; color: #ffe600; margin-bottom: 15px; z-index: 3;
+      animation: warningPulse 2s ease-in-out infinite;
+    }
+    .title {
+      font-size: 20px; letter-spacing: 2px; margin-bottom: 15px; font-weight: bold; z-index: 3;
+      animation: textGlow 2s ease-in-out infinite;
+    }
+    .info-line {
+      font-size: 13px; margin: 4px 0; opacity: 0.9; z-index: 3;
+      animation: textGlow 2s ease-in-out infinite;
+      animation-delay: calc(var(--line-index) * 0.1s);
+    }
+  </style>
+</head>
+<body>
+<div class="overlay">
+  <div class="light-spread"></div>
+  <div class="logo"></div>
+  <div class="warning-icon">🚫</div>
+  <div class="title">YOUR IP IS BLOCKED</div>
+  <div class="info-line" style="--line-index:1">IP: {{ip}}</div>
+  <div class="info-line" style="--line-index:2">Date: {{banDate}}</div>
+  <div class="info-line" style="--line-index:3">Reason: {{reason}}</div>
+  <div class="info-line" style="--line-index:4">Blocked by: {{adminName}}</div>
+</div>
+<script>
+  // Prevent all copying and context menu
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey && [65,67,85,83,80].includes(e.keyCode)) || e.keyCode === 123) e.preventDefault();
+  });
+  document.addEventListener('dragstart', e => e.preventDefault());
+</script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<section class="panel">
+  <div class="panel-head">
+    <span>🌐 Bot Guilds</span>
+    <span class="badge">Access Management</span>
+  </div>
+  <div class="panel-body">
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+      <!-- Left: Guild list -->
+      <div>
+        <h3>All Guilds</h3>
+        <div style="max-height: 500px; overflow-y: auto;" id="guildListContainer">
+          <div id="guildList"></div>
+        </div>
+      </div>
+      <!-- Right: Members of selected guild -->
+      <div>
+        <h3 id="selectedGuildTitle">Select a guild</h3>
+        <!-- Search input -->
+        <div style="margin-bottom: 10px;">
+          <input type="text" id="memberSearch" class="field-input" placeholder="Search members..." style="width: 100%;">
+        </div>
+        <div style="max-height: 500px; overflow-y: auto;">
+          <table style="width:100%; border-collapse: collapse;">
+            <thead>
+              <tr><th>User</th><th>Admin</th><th>Action</th></tr>
+            </thead>
+            <tbody id="membersBody">
+              <tr><td colspan="3" class="loading">Select a guild to view members</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (async function() {
+    let currentGuildId = null;
+    let allMembers = []; // store all members after loading all pages
+    let filteredMembers = [];
+    const guildListDiv = document.getElementById('guildList');
+    const membersBody = document.getElementById('membersBody');
+    const selectedGuildTitle = document.getElementById('selectedGuildTitle');
+    const searchInput = document.getElementById('memberSearch');
+
+    // Load all guilds where bot is present
+    async function loadGuilds() {
+      try {
+        const guilds = await apiFetch('/api/bot/guilds');
+        guildListDiv.innerHTML = '';
+        if (!guilds || guilds.length === 0) {
+          guildListDiv.innerHTML = '<div class="no-logs">No guilds found.</div>';
+          return;
+        }
+        guilds.forEach(g => {
+          const card = document.createElement('div');
+          card.className = 'guild-card';
+          card.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,.05);
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: border-color 0.2s;
+          `;
+          card.innerHTML = `
+            <img src="${g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png` : ''}" 
+                 width="32" height="32" style="border-radius: 8px; background: #333;">
+            <div style="flex:1;">
+              <div style="font-weight: 600;">${g.name}</div>
+              <div style="font-size: 12px; color: var(--muted);">${g.memberCount} members</div>
+            </div>
+          `;
+          card.addEventListener('click', () => {
+            document.querySelectorAll('.guild-card').forEach(c => c.style.borderColor = 'transparent');
+            card.style.borderColor = 'var(--accent)';
+            currentGuildId = g.id;
+            selectedGuildTitle.textContent = `Members of ${g.name}`;
+            allMembers = [];
+            filteredMembers = [];
+            searchInput.value = ''; // clear search
+            loadAllMembers(g.id);
+          });
+          guildListDiv.appendChild(card);
+        });
+      } catch (err) {
+        guildListDiv.innerHTML = `<div class="error-message">Error loading guilds: ${err.message}</div>`;
+      }
+    }
+
+    // Load all members (paginate until done)
+    async function loadAllMembers(guildId) {
+      membersBody.innerHTML = '<tr><td colspan="3" class="loading">Loading members...</td></tr>';
+      let after = null;
+      let hasMore = true;
+      allMembers = [];
+      while (hasMore) {
+        try {
+          let url = `/api/guilds/${guildId}/members?limit=100`;
+          if (after) url += `&after=${after}`;
+          const res = await fetch(url, { credentials: 'include' });
+          if (res.status === 429) {
+            const data = await res.json();
+            const retryAfter = data.retryAfter || 30;
+            membersBody.innerHTML = `<tr><td colspan="3" class="loading">
+              ⏳ Rate limited by Discord. Retrying in ${retryAfter} seconds...
+            </td></tr>`;
+            await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+            continue;
+          }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          allMembers = allMembers.concat(data.members);
+          after = data.next;
+          hasMore = data.hasMore;
+        } catch (err) {
+          membersBody.innerHTML = `<tr><td colspan="3" class="error-message">Error loading members: ${err.message}</td></tr>`;
+          return;
+        }
+      }
+      filteredMembers = allMembers;
+      renderMembers();
+    }
+
+    function renderMembers() {
+      membersBody.innerHTML = '';
+      if (filteredMembers.length === 0) {
+        membersBody.innerHTML = '<tr><td colspan="3" class="info-msg">No members match your search.</td></tr>';
+        return;
+      }
+      filteredMembers.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="display: flex; align-items: center; gap: 8px;">
+            <img src="${m.avatar ? `https://cdn.discordapp.com/avatars/${m.id}/${m.avatar}.png` : ''}" 
+                 width="24" height="24" style="border-radius: 50%; background: #333;">
+            ${m.username}
+          </td>
+          <td>${m.isAdmin ? '✅' : '❌'}</td>
+          <td>
+            <button class="btn btn-sm glow-btn ${m.isAdmin ? 'danger' : 'primary'}" 
+        data-user-id="${m.id}" 
+        data-is-admin="${m.isAdmin}">
+  ${m.isAdmin ? 'Revoke' : 'Grant'} Admin
+</button>
+          </td>
+        `;
+        membersBody.appendChild(tr);
+      });
+      attachMemberEvents();
+    }
+
+    function attachMemberEvents() {
+      document.querySelectorAll('button[data-user-id]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const userId = btn.dataset.userId;
+          const isAdmin = btn.dataset.isAdmin === 'true';
+          const action = isAdmin ? 'revoke' : 'grant';
+          
+          if (typeof showConfirmModal !== 'function') {
+            if (!confirm(`${action} admin access for this user?`)) return;
+          } else {
+            const confirmed = await showConfirmModal(
+              `${action} Admin`,
+              `Are you sure you want to ${action} admin access for this user?`
+            );
+            if (!confirmed) return;
+          }
+
+          try {
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            
+            if (isAdmin) {
+              await apiFetch(`/api/guilds/${currentGuildId}/admin/${userId}`, { method: 'DELETE' });
+            } else {
+              await apiFetch(`/api/guilds/${currentGuildId}/admin`, {
+                method: 'POST',
+                body: JSON.stringify({ userId })
+              });
+            }
+            // Reload all members to reflect admin status change
+            await loadAllMembers(currentGuildId);
+          } catch (err) {
+            alert('Failed: ' + err.message);
+            btn.disabled = false;
+            btn.textContent = isAdmin ? 'Revoke Admin' : 'Grant Admin';
+          }
+        });
+      });
+    }
+
+    // Real-time search filter
+    searchInput.addEventListener('input', () => {
+      const term = searchInput.value.toLowerCase().trim();
+      if (term === '') {
+        filteredMembers = allMembers;
+      } else {
+        filteredMembers = allMembers.filter(m => 
+          (m.username && m.username.toLowerCase().includes(term)) ||
+          (m.nickname && m.nickname.toLowerCase().includes(term))
+        );
+      }
+      renderMembers();
+    });
+
+    loadGuilds();
+  })();
+</script>

@@ -1,0 +1,1059 @@
+<!-- greetings-setup.html -->
+<div class="greetings-dashboard">
+  <!-- Pickr & FontAwesome -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <style>
+    /* Use the same CSS variables as server.html */
+    :root {
+      --bg0: #071027;
+      --bg1: #0b1736;
+      --panel: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.10);
+      --text: #e7eefc;
+      --muted: #9aa8c7;
+      --accent: #5b6bff;
+      --accent2: #7c5cff;
+      --good: #22c55e;
+      --shadow: 0 16px 40px rgba(0,0,0,.45);
+      --r: 16px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* Custom scrollbar for the variables card */
+    .variables-scroll {
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent) rgba(0,0,0,0.3);
+    }
+    .variables-scroll::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .variables-scroll::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.3);
+      border-radius: 4px;
+    }
+    .variables-scroll::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border-radius: 4px;
+    }
+    .variables-scroll::-webkit-scrollbar-thumb:hover {
+      background: var(--accent2);
+    }
+
+    .greetings-dashboard {
+      max-width: 1440px;
+      width: 100%;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 40% 60%;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--panel);
+      border-radius: var(--r);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--stroke);
+      margin-bottom: 20px;
+    }
+
+    .card:last-child { margin-bottom: 0; }
+
+    .card__title {
+      color: var(--text);
+      font-weight: 600;
+      font-size: 1.2rem;
+      margin-bottom: 14px;
+      letter-spacing: 0.3px;
+    }
+
+    .info-box {
+      background: rgba(0,0,0,.3);
+      border-left: 4px solid var(--accent);
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .info-box code {
+      background: rgba(0,0,0,.5);
+      color: var(--text);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    select, textarea, input[type="text"], input[type="url"], input[type="color"] {
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+      width: 100%;
+      outline: none;
+    }
+
+    select:focus, textarea:focus, input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(91, 107, 255, 0.3);
+    }
+
+    .btn {
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--stroke);
+      border-radius: 6px;
+      padding: 8px 16px;
+      color: var(--text);
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--accent2); }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--stroke);
+      color: var(--text);
+    }
+    .btn-outline:hover { background: rgba(255,255,255,.1); }
+
+    .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+
+    .btn-group { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+    .channel-row { margin-bottom: 20px; }
+
+    .embed-builder-toggle { margin: 12px 0 8px; }
+
+    .embed-editor-wrapper {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease-in-out;
+      background: rgba(0,0,0,.3);
+      border-radius: 12px;
+      margin: 16px 0 12px;
+      border: 1px solid var(--stroke);
+      position: relative;
+    }
+    .embed-editor-wrapper.expanded { max-height: 2000px; }
+
+    .editor-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(0,0,0,.2);
+      border-bottom: 1px solid var(--stroke);
+      align-items: center;
+    }
+    .toolbar-btn {
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--stroke);
+      border-radius: 4px;
+      padding: 6px 12px;
+      color: var(--text);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .toolbar-btn:hover { background: rgba(255,255,255,.15); }
+
+    .pickr { position: relative; z-index: 9999; }
+
+    .embed-editor-inner {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      padding: 18px;
+      flex-wrap: wrap;
+    }
+    .editor-fields { flex: 1 1 300px; min-width: 250px; }
+
+    .preview-container {
+      flex: 1 1 280px;
+      background: rgba(0,0,0,.4);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    .field-row {
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+    .field-row .field-header {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .field-header input[type="text"] { flex: 1; }
+    .field-header label { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+    .field-row textarea {
+      width: 100%;
+      min-height: 60px;
+      margin: 6px 0;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      color: var(--text);
+    }
+    .field-remove {
+      background: none;
+      border: none;
+      color: #ed4245;
+      font-size: 1.2rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .field-footer {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .char-counter { text-align: right; font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+    .timestamp-btn {
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--stroke);
+      border-radius: 4px;
+      padding: 6px 10px;
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Embed preview – keep Discord-like colors for readability */
+    .discord-embed {
+      color: #dcddde;
+      font-size: 0.9rem;
+      display: flex;
+      gap: 12px;
+    }
+    .embed-color-strip { width: 4px; border-radius: 2px; flex-shrink: 0; }
+    .embed-content { flex: 1; }
+    .embed-author { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .embed-author img { width: 24px; height: 24px; border-radius: 50%; background: #40444b; }
+    .embed-title { font-weight: 600; color: #00aff4; margin-bottom: 6px; }
+    .embed-description { margin-bottom: 12px; line-height: 1.4; white-space: pre-wrap; }
+    .embed-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    .embed-field { flex: 1 1 200px; }
+    .embed-field.inline { flex: 0 1 auto; min-width: 140px; }
+    .field-name { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; color: #b9bbbe; }
+    .embed-thumbnail { float: right; max-width: 80px; max-height: 80px; margin-left: 12px; border-radius: 6px; }
+    .embed-image img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
+    .embed-footer { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.75rem; color: #b9bbbe; border-top: 1px solid #3b3f45; padding-top: 8px; }
+    .embed-footer img { width: 20px; height: 20px; border-radius: 50%; }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .embed-editor-inner { flex-direction: column; }
+    }
+    .text-muted { color: var(--muted); }
+    .mt-2 { margin-top: 8px; }
+    .flex { display: flex; gap: 8px; align-items: center; }
+  </style>
+
+ <!-- greetings-setup.html -->
+<div class="greetings-dashboard">
+  <!-- Pickr & FontAwesome -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <style>
+    /* ===== (existing styles unchanged) ===== */
+    :root{ --bg0:#071027; --bg1:#0b1736; --panel: rgba(255,255,255,.06); --stroke: rgba(255,255,255,.10); --text:#e7eefc; --muted:#9aa8c7; --accent:#5b6bff; --accent2:#7c5cff; --good:#22c55e; --shadow: 0 16px 40px rgba(0,0,0,.45); --r: 16px; }
+    *{ margin:0; padding:0; box-sizing:border-box; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; }
+    .variables-scroll{ max-height:400px; overflow-y:auto; padding-right:8px; scrollbar-width:thin; scrollbar-color:var(--accent) rgba(0,0,0,0.3); }
+    .variables-scroll::-webkit-scrollbar{ width:8px; height:8px; }
+    .variables-scroll::-webkit-scrollbar-track{ background:rgba(0,0,0,0.3); border-radius:4px; }
+    .variables-scroll::-webkit-scrollbar-thumb{ background:var(--accent); border-radius:4px; }
+    .variables-scroll::-webkit-scrollbar-thumb:hover{ background:var(--accent2); }
+    .greetings-dashboard{ max-width:1440px; width:100%; }
+    .grid{ display:grid; grid-template-columns:40% 60%; gap:20px; }
+    .card{ background:var(--panel); border-radius:var(--r); padding:18px 20px; box-shadow:var(--shadow); border:1px solid var(--stroke); margin-bottom:20px; }
+    .card:last-child{ margin-bottom:0; }
+    .card__title{ color:var(--text); font-weight:600; font-size:1.2rem; margin-bottom:14px; letter-spacing:.3px; }
+    .info-box{ background:rgba(0,0,0,.3); border-left:4px solid var(--accent); padding:12px 14px; border-radius:8px; margin-bottom:18px; color:var(--muted); font-size:.9rem; }
+    .info-box code{ background:rgba(0,0,0,.5); color:var(--text); padding:2px 6px; border-radius:4px; }
+    select,textarea,input[type="text"],input[type="url"],input[type="color"]{ background:rgba(0,0,0,.3); border:1px solid var(--stroke); border-radius:8px; padding:10px 12px; color:var(--text); font-size:.95rem; width:100%; outline:none; }
+    select:focus,textarea:focus,input:focus{ border-color:var(--accent); box-shadow:0 0 0 2px rgba(91,107,255,.3); }
+    .btn{ background:rgba(255,255,255,.08); border:1px solid var(--stroke); border-radius:6px; padding:8px 16px; color:var(--text); font-weight:500; font-size:.9rem; cursor:pointer; transition:background-color .15s; }
+    .btn-primary{ background:var(--accent); color:white; }
+    .btn-primary:hover{ background:var(--accent2); }
+    .btn-outline{ background:transparent; border:1px solid var(--stroke); color:var(--text); }
+    .btn-outline:hover{ background:rgba(255,255,255,.1); }
+    .btn-sm{ padding:5px 12px; font-size:.8rem; }
+    .btn-group{ display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+    .channel-row{ margin-bottom:20px; }
+    .embed-builder-toggle{ margin:12px 0 8px; }
+    .embed-editor-wrapper{ max-height:0; overflow:hidden; transition:max-height .35s ease-in-out; background:rgba(0,0,0,.3); border-radius:12px; margin:16px 0 12px; border:1px solid var(--stroke); position:relative; }
+    .embed-editor-wrapper.expanded{ max-height:2000px; }
+    .editor-toolbar{ display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px; background:rgba(0,0,0,.2); border-bottom:1px solid var(--stroke); align-items:center; }
+    .toolbar-btn{ background:rgba(255,255,255,.08); border:1px solid var(--stroke); border-radius:4px; padding:6px 12px; color:var(--text); font-size:.85rem; cursor:pointer; }
+    .toolbar-btn:hover{ background:rgba(255,255,255,.15); }
+    .pickr{ position:relative; z-index:9999; }
+    .embed-editor-inner{ display:flex; flex-direction:row; gap:20px; padding:18px; flex-wrap:wrap; }
+    .editor-fields{ flex:1 1 300px; min-width:250px; }
+    .preview-container{ flex:1 1 280px; background:rgba(0,0,0,.4); border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.5); }
+    .field-row{ background:rgba(255,255,255,.08); border:1px solid var(--stroke); border-radius:8px; padding:8px; margin-bottom:10px; }
+    .field-row .field-header{ display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+    .field-header input[type="text"]{ flex:1; }
+    .field-header label{ display:flex; align-items:center; gap:4px; color:var(--muted); }
+    .field-row textarea{ width:100%; min-height:60px; margin:6px 0; background:rgba(0,0,0,.3); border:1px solid var(--stroke); color:var(--text); }
+    .field-remove{ background:none; border:none; color:#ed4245; font-size:1.2rem; cursor:pointer; font-weight:bold; }
+    .field-footer{ display:flex; justify-content:space-between; color:var(--muted); font-size:.8rem; }
+    .char-counter{ text-align:right; font-size:.75rem; color:var(--muted); margin-top:2px; }
+    .timestamp-btn{ background:rgba(255,255,255,.08); border:1px solid var(--stroke); border-radius:4px; padding:6px 10px; color:var(--text); cursor:pointer; display:inline-flex; align-items:center; gap:4px; }
+    .discord-embed{ color:#dcddde; font-size:.9rem; display:flex; gap:12px; }
+    .embed-color-strip{ width:4px; border-radius:2px; flex-shrink:0; }
+    .embed-content{ flex:1; }
+    .embed-author{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .embed-author img{ width:24px; height:24px; border-radius:50%; background:#40444b; }
+    .embed-title{ font-weight:600; color:#00aff4; margin-bottom:6px; }
+    .embed-description{ margin-bottom:12px; line-height:1.4; white-space:pre-wrap; }
+    .embed-fields{ display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+    .embed-field{ flex:1 1 200px; }
+    .embed-field.inline{ flex:0 1 auto; min-width:140px; }
+    .field-name{ font-weight:600; font-size:.85rem; text-transform:uppercase; color:#b9bbbe; }
+    .embed-thumbnail{ float:right; max-width:80px; max-height:80px; margin-left:12px; border-radius:6px; }
+    .embed-image img{ max-width:100%; border-radius:8px; margin:8px 0; }
+    .embed-footer{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:.75rem; color:#b9bbbe; border-top:1px solid #3b3f45; padding-top:8px; }
+    .embed-footer img{ width:20px; height:20px; border-radius:50%; }
+    @media(max-width:900px){ .grid{ grid-template-columns:1fr; } .embed-editor-inner{ flex-direction:column; } }
+    .text-muted{ color:var(--muted); }
+    .mt-2{ margin-top:8px; }
+    .flex{ display:flex; gap:8px; align-items:center; }
+  </style>
+
+  <div class="grid">
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+      <!-- Welcome & Farewell Channels -->
+      <div class="card">
+        <div class="card__title" data-i18n="greetings.welcome_farewell_channels">📢 Welcome & Farewell Channels</div>
+        <div class="channel-row">
+          <label data-i18n="greetings.welcome_channel">Welcome Channel</label>
+          <select id="welcomeChannelSelect"></select>
+        </div>
+        <div class="channel-row">
+          <label data-i18n="greetings.farewell_channel">Farewell Channel</label>
+          <select id="farewellChannelSelect"></select>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary glow-btn" id="saveChannelSettings" data-i18n="common.save">Save</button>
+        </div>
+      </div>
+
+      <!-- Ban & Kick Channels -->
+      <div class="card">
+        <div class="card__title" data-i18n="greetings.ban_kick_channels">🔨 Ban & Kick Channels</div>
+        <div class="channel-row">
+          <label data-i18n="greetings.ban_channel">Ban Channel (optional, uses welcome if not set)</label>
+          <select id="banChannelSelect"></select>
+        </div>
+        <div class="channel-row">
+          <label data-i18n="greetings.kick_channel">Kick Channel (optional, uses welcome if not set)</label>
+          <select id="kickChannelSelect"></select>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary glow-btn" id="saveBanKickChannels" data-i18n="common.save">Save</button>
+        </div>
+      </div>
+
+      <!-- Variables Reference Card -->
+      <div class="card">
+        <div class="card__title" data-i18n="greetings.variables_title">📚 Available Variables</div>
+        <div class="variables-scroll">
+          <div class="info-box">
+            <strong><span style="color:#5b6bff;" data-i18n="greetings.user_variables">👤 User Variables</span></strong><br>
+            <code>{mention}</code> – <span data-i18n="greetings.var_mention">Mentions the user (@username)</span><br>
+            <code>{user}</code> – <span data-i18n="greetings.var_user">User's username</span><br>
+            <code>{user(id)}</code> – <span data-i18n="greetings.var_user_id">User's Discord ID</span><br>
+            <code>{user(proper)}</code> – <span data-i18n="greetings.var_user_proper">User's tag (Username#1234)</span><br>
+            <code>{user(avatar)}</code> – <span data-i18n="greetings.var_user_avatar">User's avatar URL</span><br>
+            <code>{user(created)}</code> – <span data-i18n="greetings.var_user_created">When user created their account</span><br>
+            <code>{user(joined)}</code> – <span data-i18n="greetings.var_user_joined">When user joined the server</span>
+          </div>
+          <div class="info-box">
+            <strong><span style="color:#5b6bff;" data-i18n="greetings.server_variables">🏠 Server Variables</span></strong><br>
+            <code>{server}</code> – <span data-i18n="greetings.var_server">Server name</span><br>
+            <code>{server(id)}</code> – <span data-i18n="greetings.var_server_id">Server ID</span><br>
+            <code>{server(members)}</code> – <span data-i18n="greetings.var_server_members">Total member count</span><br>
+            <code>{ord:{server(members)}}</code> – <span data-i18n="greetings.var_ord_members">Member count with ordinal (1st, 2nd, 3rd)</span><br>
+            <code>{time}</code> – <span data-i18n="greetings.var_time">Current time</span><br>
+            <code>{date}</code> – <span data-i18n="greetings.var_date">Current date</span><br>
+            <code>{event}</code> – <span data-i18n="greetings.var_event">Event type (welcome/farewell/ban/kick)</span>
+          </div>
+          <div class="info-box">
+            <strong><span style="color:#5b6bff;" data-i18n="greetings.invite_variables">📊 Invite Tracking Variables</span></strong><br>
+            <code>{inviter}</code> – <span data-i18n="greetings.var_inviter">Username of who invited the user</span><br>
+            <code>{inviter(mention)}</code> – <span data-i18n="greetings.var_inviter_mention">Mention of who invited the user</span><br>
+            <code>{invites}</code> – <span data-i18n="greetings.var_invites">Total invites by the inviter</span><br>
+            <code>{invites(regular)}</code> – <span data-i18n="greetings.var_invites_regular">Regular invites (still in server)</span><br>
+            <code>{invites(leave)}</code> – <span data-i18n="greetings.var_invites_leave">Invites who left</span><br>
+            <code>{invites(fake)}</code> – <span data-i18n="greetings.var_invites_fake">Fake invites (bots)</span>
+          </div>
+          <div class="info-box">
+            <strong><span style="color:#5b6bff;" data-i18n="greetings.advanced_variables">🎲 Advanced Variables</span></strong><br>
+            <code>{random:option1~option2~option3}</code> – <span data-i18n="greetings.var_random">Randomly selects one option</span><br>
+            <code>{math:2+2}</code> – <span data-i18n="greetings.var_math">Performs mathematical calculations</span><br><br>
+            <strong data-i18n="greetings.examples">Examples:</strong><br>
+            <code data-i18n="greetings.example_welcome">Welcome {mention}! You are member #{ord:{server(members)}}</code><br>
+            <code data-i18n="greetings.example_random">{random:Hey~Hello~Greetings} {user}, enjoy your stay!</code><br>
+            <code data-i18n="greetings.example_inviter">You were invited by {inviter(mention)} who has {invites} invites!</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leave Message (farewell) -->
+      <div class="card" data-type="leave">
+        <div class="card__title" data-i18n="greetings.leave_message">🚪 Leave message</div>
+        <textarea class="message-input" data-type="leave" data-i18n-placeholder="greetings.leave_placeholder" placeholder="{user} has left the server."></textarea>
+        <button class="btn btn-outline btn-sm toggle-embed" data-type="leave" data-i18n="greetings.show_embed_builder">Show embed builder</button>
+        <div class="embed-editor-wrapper" id="embed-wrapper-leave"></div>
+        <div class="btn-group">
+          <button class="btn btn-primary save-message glow-btn" data-type="leave" data-i18n="common.save">Save</button>
+          <button class="btn btn-outline test-message glow-btn" data-type="farewell" data-dm="false" data-i18n="common.test">Test</button>
+          <button class="btn btn-outline clear-message glow-btn" data-type="leave" data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+
+      <!-- Ban Message -->
+      <div class="card" data-type="ban">
+        <div class="card__title" data-i18n="greetings.ban_message">🔨 Ban message</div>
+        <textarea class="message-input" data-type="ban" data-i18n-placeholder="greetings.ban_placeholder" placeholder="{user} flew too close to the sun and got banned."></textarea>
+        <button class="btn btn-outline btn-sm toggle-embed glow-btn" data-type="ban" data-i18n="greetings.show_embed_builder">Show embed builder</button>
+        <div class="embed-editor-wrapper" id="embed-wrapper-ban"></div>
+        <div class="btn-group">
+          <button class="btn btn-primary save-message glow-btn" data-type="ban" data-i18n="common.save">Save</button>
+          <button class="btn btn-outline test-message glow-btn" data-type="ban" data-dm="false" data-i18n="common.test">Test</button>
+          <button class="btn btn-outline clear-message glow-btn" data-type="ban" data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right-col">
+      <!-- Welcome Message -->
+      <div class="card" data-type="welcome">
+        <div class="card__title" data-i18n="greetings.welcome_message">👋 Welcome Message</div>
+        <textarea class="message-input" data-type="welcome" data-i18n-placeholder="greetings.welcome_placeholder" placeholder="Welcome {mention} to {server}!"></textarea>
+        <button class="btn btn-outline btn-sm toggle-embed glow-btn" data-type="welcome" data-i18n="greetings.show_embed_builder">Show embed builder</button>
+        <div class="embed-editor-wrapper" id="embed-wrapper-welcome"></div>
+        <div class="btn-group">
+          <button class="btn btn-primary save-message glow-btn" data-type="welcome" data-i18n="common.save">Save</button>
+          <button class="btn btn-outline test-message glow-btn" data-type="welcome" data-dm="false" data-i18n="common.test">Test</button>
+          <button class="btn btn-outline clear-message glow-btn" data-type="welcome" data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+
+      <!-- Kick Message -->
+      <div class="card" data-type="kick">
+        <div class="card__title" data-i18n="greetings.kick_message">👢 Kick message</div>
+        <textarea class="message-input" data-type="kick" data-i18n-placeholder="greetings.kick_placeholder" placeholder="{user} has been kicked."></textarea>
+        <button class="btn btn-outline btn-sm toggle-embed glow-btn" data-type="kick" data-i18n="greetings.show_embed_builder">Show embed builder</button>
+        <div class="embed-editor-wrapper" id="embed-wrapper-kick"></div>
+        <div class="btn-group">
+          <button class="btn btn-primary save-message glow-btn" data-type="kick" data-i18n="common.save">Save</button>
+          <button class="btn btn-outline test-message glow-btn" data-type="kick" data-dm="false" data-i18n="common.test">Test</button>
+          <button class="btn btn-outline clear-message glow-btn" data-type="kick" data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+
+      <!-- DM on Join -->
+      <div class="card" data-type="dmjoin">
+        <div class="card__title" data-i18n="greetings.dm_join">✉️ DM on join</div>
+        <textarea class="message-input" data-type="dmjoin" data-i18n-placeholder="greetings.dm_join_placeholder" placeholder="Howdy {user} and welcome to {server}!"></textarea>
+        <button class="btn btn-outline btn-sm toggle-embed glow-btn" data-type="dmjoin" data-i18n="greetings.show_embed_builder">Show embed builder</button>
+        <div class="embed-editor-wrapper" id="embed-wrapper-dmjoin"></div>
+        <div class="btn-group">
+          <button class="btn btn-primary save-message glow-btn" data-type="dmjoin" data-i18n="common.save">Save</button>
+          <button class="btn btn-outline test-message glow-btn" data-type="welcome" data-dm="true" data-i18n="common.test">Test</button>
+          <button class="btn btn-outline clear-message glow-btn" data-type="dmjoin" data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+
+      <!-- DM on Leave -->
+      <div class="card" data-type="dmleave">
+        <div class="card__title" data-i18n="greetings.dm_leave">📤 DM on leave</div>
+        <textarea class="message-input" data-type="dmleave" data-i18n-placeholder="greetings.dm_leave_placeholder" placeholder="You have left {server}. We hope to see you again!"></textarea>
+        <button class="btn btn-outline btn-sm toggle-embed glow-btn" data-type="dmleave" data-i18n="greetings.show_embed_builder">Show embed builder</button>
+        <div class="embed-editor-wrapper" id="embed-wrapper-dmleave"></div>
+        <div class="btn-group">
+          <button class="btn btn-primary save-message glow-btn" data-type="dmleave" data-i18n="common.save">Save</button>
+          <button class="btn btn-outline test-message glow-btn" data-type="farewell" data-dm="true" data-i18n="common.test">Test</button>
+          <button class="btn btn-outline clear-message glow-btn" data-type="dmleave" data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guildId = urlParams.get('guild');
+      if (!guildId) {
+        alert('No guild selected');
+        return;
+      }
+
+      // Translation helper
+      const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+
+      // Map internal card types to API message types
+      const typeMap = {
+        'welcome': 'welcome',
+        'dmjoin': 'welcome_dm',
+        'dmleave': 'farewell_dm',
+        'leave': 'farewell',
+        'ban': 'ban',
+        'kick': 'kick'
+      };
+      const cards = ['welcome', 'dmjoin', 'dmleave', 'leave', 'ban', 'kick'];
+      const embedStates = {};
+      cards.forEach(c => {
+        embedStates[c] = {
+          authorName: '', authorIcon: '', authorUrl: '',
+          title: '', titleUrl: '',
+          description: '',
+          fields: [],
+          image: '', thumbnail: '',
+          footerText: '', footerIcon: '',
+          timestamp: null,
+          color: '#5865F2'
+        };
+      });
+
+      const editorBuilt = {};
+      const pickrInstances = {};
+
+      async function loadChannels() {
+        try {
+          const channels = await apiFetch(`/api/guilds/${guildId}/channels`);
+          const welcomeSelect = document.getElementById('welcomeChannelSelect');
+          const farewellSelect = document.getElementById('farewellChannelSelect');
+          const banSelect = document.getElementById('banChannelSelect');
+          const kickSelect = document.getElementById('kickChannelSelect');
+
+          [welcomeSelect, farewellSelect, banSelect, kickSelect].forEach(sel => {
+            sel.innerHTML = `<option value="">${t('common.none', 'None')}</option>`;
+          });
+          channels.forEach(ch => {
+            const opt = `<option value="${ch.id}">#${ch.name}</option>`;
+            welcomeSelect.innerHTML += opt;
+            farewellSelect.innerHTML += opt;
+            banSelect.innerHTML += opt;
+            kickSelect.innerHTML += opt;
+          });
+        } catch (err) {
+          console.error('Failed to load channels:', err);
+        }
+      }
+
+      async function loadSettings() {
+        try {
+          const settings = await apiFetch(`/api/guilds/${guildId}/greetings/settings`);
+          document.getElementById('welcomeChannelSelect').value = settings.welcome_channel_id || '';
+          document.getElementById('farewellChannelSelect').value = settings.farewell_channel_id || '';
+          document.getElementById('banChannelSelect').value = settings.ban_channel_id || '';
+          document.getElementById('kickChannelSelect').value = settings.kick_channel_id || '';
+        } catch (err) {
+          console.error('Failed to load settings:', err);
+        }
+      }
+
+      async function loadMessage(card) {
+        const apiType = typeMap[card];
+        if (!apiType) return;
+        
+        const isDM = apiType.endsWith('_dm');
+        const endpoint = isDM 
+          ? `/api/guilds/${guildId}/greetings/dm-messages/${apiType}`
+          : `/api/guilds/${guildId}/greetings/messages/${apiType}`;
+        
+        try {
+          const data = await apiFetch(endpoint);
+          
+          const textarea = document.querySelector(`textarea[data-type="${card}"]`);
+          if (textarea) textarea.value = data.content || '';
+
+          embedStates[card] = {
+            authorName: data.embed_author || '',
+            authorIcon: data.embed_author_icon || '',
+            authorUrl: data.embed_author_url || '',
+            title: data.embed_title || '',
+            titleUrl: data.embed_title_url || '',
+            description: data.embed_description || '',
+            fields: data.embed_fields ? JSON.parse(data.embed_fields) : [],
+            image: data.embed_image || '',
+            thumbnail: data.embed_thumbnail || '',
+            footerText: data.embed_footer || '',
+            footerIcon: data.embed_footer_icon || '',
+            timestamp: data.embed_timestamp || null,
+            color: data.embed_color || '#5865F2'
+          };
+
+          if (editorBuilt[card]) {
+            const left = document.querySelector(`.editor-fields[data-card="${card}"]`);
+            if (left) {
+              left.querySelector('.embed-author-name').value = embedStates[card].authorName;
+              left.querySelector('.embed-author-icon').value = embedStates[card].authorIcon;
+              left.querySelector('.embed-author-url').value = embedStates[card].authorUrl;
+              left.querySelector('.embed-title-input').value = embedStates[card].title;
+              left.querySelector('.embed-title-url').value = embedStates[card].titleUrl;
+              left.querySelector('.embed-description-input').value = embedStates[card].description;
+              left.querySelector('.embed-image').value = embedStates[card].image;
+              left.querySelector('.embed-thumbnail-url').value = embedStates[card].thumbnail;
+              left.querySelector('.embed-footer-text').value = embedStates[card].footerText;
+              left.querySelector('.embed-footer-icon').value = embedStates[card].footerIcon;
+              if (embedStates[card].timestamp) {
+                document.getElementById(`timestampDisplay-${card}`).innerText = new Date(embedStates[card].timestamp).toLocaleString();
+              }
+              if (pickrInstances[card]) {
+                pickrInstances[card].setColor(embedStates[card].color);
+              }
+              renderFields(card);
+              updatePreview(card);
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to load message ${card}:`, err);
+        }
+      }
+
+      function buildEmbedEditor(card) {
+        if (editorBuilt[card]) return;
+        const wrapper = document.getElementById(`embed-wrapper-${card}`);
+        if (!wrapper) return;
+        editorBuilt[card] = true;
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'editor-toolbar';
+        toolbar.innerHTML = `
+          <button class="toolbar-btn color-picker-btn glow-btn" data-card="${card}" data-i18n="greetings.color"><i class="fas fa-palette"></i> ${t('greetings.color', 'Color')}</button>
+          <button class="toolbar-btn import-embed glow-btn" data-card="${card}" data-i18n="greetings.import"><i class="fas fa-upload"></i> ${t('greetings.import', 'Import')}</button>
+          <button class="toolbar-btn export-embed glow-btn" data-card="${card}" data-i18n="greetings.export"><i class="fas fa-download"></i> ${t('greetings.export', 'Export')}</button>
+          <button class="toolbar-btn clear-embed-fields glow-btn" data-card="${card}" data-i18n="greetings.clear_embed"><i class="fas fa-trash"></i> ${t('greetings.clear_embed', 'Clear')}</button>
+          <button class="toolbar-btn hide-embed-editor glow-btn" data-card="${card}" data-i18n="greetings.hide"><i class="fas fa-eye-slash"></i> ${t('greetings.hide', 'Hide')}</button>
+        `;
+        wrapper.appendChild(toolbar);
+
+        const inner = document.createElement('div');
+        inner.className = 'embed-editor-inner';
+        inner.id = `inner-${card}`;
+        wrapper.appendChild(inner);
+
+        const leftDiv = document.createElement('div');
+        leftDiv.className = 'editor-fields';
+        leftDiv.setAttribute('data-card', card);
+        leftDiv.innerHTML = `
+          <h4 style="color:var(--text);" data-i18n="greetings.author">Author</h4>
+          <input type="text" data-i18n-placeholder="greetings.author_name" placeholder="${t('greetings.author_name', 'Author name')}" class="embed-author-name" maxlength="256">
+          <input type="url" data-i18n-placeholder="greetings.author_icon_url" placeholder="${t('greetings.author_icon_url', 'Author icon URL')}" class="embed-author-icon">
+          <input type="url" data-i18n-placeholder="greetings.author_url" placeholder="${t('greetings.author_url', 'Author URL')}" class="embed-author-url">
+
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="greetings.title">Title</h4>
+          <input type="text" data-i18n-placeholder="greetings.title_placeholder" placeholder="${t('greetings.title_placeholder', 'Title')}" class="embed-title-input" maxlength="256">
+          <input type="url" data-i18n-placeholder="greetings.title_url" placeholder="${t('greetings.title_url', 'Title URL')}" class="embed-title-url">
+
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="greetings.description">Description</h4>
+          <textarea data-i18n-placeholder="greetings.description_max" placeholder="${t('greetings.description_max', 'Description (max 20000)')}" class="embed-description-input" maxlength="20000"></textarea>
+
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="greetings.fields">Fields <span class="text-muted" id="fieldCounter-${card}">0/25</span></h4>
+          <div class="fields-container" id="fields-${card}"></div>
+          <button class="btn btn-outline btn-sm add-field-btn" data-card="${card}" data-i18n="greetings.add_field">➕ ${t('greetings.add_field', 'Add field')}</button>
+
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="greetings.images">Images</h4>
+          <input type="url" data-i18n-placeholder="greetings.image_url" placeholder="${t('greetings.image_url', 'Image URL')}" class="embed-image">
+          <input type="url" data-i18n-placeholder="greetings.thumbnail_url" placeholder="${t('greetings.thumbnail_url', 'Thumbnail URL')}" class="embed-thumbnail-url">
+
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="greetings.footer">Footer</h4>
+          <input type="text" data-i18n-placeholder="greetings.footer_text" placeholder="${t('greetings.footer_text', 'Footer text')}" class="embed-footer-text" maxlength="2048">
+          <input type="url" data-i18n-placeholder="greetings.footer_icon_url" placeholder="${t('greetings.footer_icon_url', 'Footer icon URL')}" class="embed-footer-icon">
+
+          <div style="margin:16px 0;">
+            <button class="timestamp-btn" id="timestampBtn-${card}" data-i18n="greetings.set_timestamp"><i class="far fa-calendar-alt"></i> ${t('greetings.set_timestamp', 'Set timestamp')}</button>
+            <span class="text-muted" id="timestampDisplay-${card}" data-i18n="greetings.none">${t('greetings.none', 'none')}</span>
+            <input type="datetime-local" id="timestampPicker-${card}" style="display:none;">
+          </div>
+        `;
+        inner.appendChild(leftDiv);
+
+        // Populate with existing data
+        const state = embedStates[card];
+        leftDiv.querySelector('.embed-author-name').value = state.authorName || '';
+        leftDiv.querySelector('.embed-author-icon').value = state.authorIcon || '';
+        leftDiv.querySelector('.embed-author-url').value = state.authorUrl || '';
+        leftDiv.querySelector('.embed-title-input').value = state.title || '';
+        leftDiv.querySelector('.embed-title-url').value = state.titleUrl || '';
+        leftDiv.querySelector('.embed-description-input').value = state.description || '';
+        leftDiv.querySelector('.embed-image').value = state.image || '';
+        leftDiv.querySelector('.embed-thumbnail-url').value = state.thumbnail || '';
+        leftDiv.querySelector('.embed-footer-text').value = state.footerText || '';
+        leftDiv.querySelector('.embed-footer-icon').value = state.footerIcon || '';
+        if (state.timestamp) {
+          document.getElementById(`timestampDisplay-${card}`).innerText = new Date(state.timestamp).toLocaleString();
+        }
+        renderFields(card);
+
+        const previewDiv = document.createElement('div');
+        previewDiv.className = 'preview-container';
+        previewDiv.innerHTML = `<div id="embed-preview-${card}"></div>`;
+        inner.appendChild(previewDiv);
+
+        attachFieldListeners(card);
+
+        leftDiv.querySelector('.add-field-btn').addEventListener('click', () => addField(card));
+
+        const tsBtn = document.getElementById(`timestampBtn-${card}`);
+        const tsPicker = document.getElementById(`timestampPicker-${card}`);
+        tsBtn.addEventListener('click', () => tsPicker.showPicker());
+        tsPicker.addEventListener('change', (e) => {
+          embedStates[card].timestamp = e.target.value ? new Date(e.target.value).toISOString() : null;
+          document.getElementById(`timestampDisplay-${card}`).innerText = e.target.value ? new Date(e.target.value).toLocaleString() : t('greetings.none', 'none');
+          updatePreview(card);
+        });
+
+        toolbar.querySelector('.hide-embed-editor').addEventListener('click', () => {
+          wrapper.classList.remove('expanded');
+          const toggleBtn = document.querySelector(`.toggle-embed[data-card="${card}"]`);
+          if (toggleBtn) toggleBtn.textContent = t('greetings.show_embed_builder', 'Show embed builder');
+        });
+
+        toolbar.querySelector('.import-embed').addEventListener('click', () => importEmbed(card));
+        toolbar.querySelector('.export-embed').addEventListener('click', () => exportEmbed(card));
+        toolbar.querySelector('.clear-embed-fields').addEventListener('click', () => clearEmbed(card));
+
+        const colorBtn = toolbar.querySelector('.color-picker-btn');
+        const pickr = Pickr.create({
+          el: colorBtn,
+          theme: 'nano',
+          default: embedStates[card].color,
+          useAsButton: true,
+          components: { preview: true, opacity: true, hue: true, interaction: { hex: true, rgba: true, input: true, clear: true, save: true } }
+        });
+        pickr.on('save', (color) => {
+          if (!color) return;
+          embedStates[card].color = color.toHEXA().toString();
+          updatePreview(card);
+          pickr.hide();
+        });
+        pickrInstances[card] = pickr;
+
+        // Apply translations after building
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      }
+
+      function attachFieldListeners(card) {
+        const left = document.querySelector(`.editor-fields[data-card="${card}"]`);
+        if (!left) return;
+        left.querySelectorAll('input, textarea').forEach(el => {
+          el.addEventListener('input', () => updatePreview(card));
+        });
+        updatePreview(card);
+      }
+
+      function addField(card) {
+        if (embedStates[card].fields.length >= 25) return;
+        embedStates[card].fields.push({ name: '', value: '', inline: false });
+        renderFields(card);
+        updatePreview(card);
+      }
+
+      function removeField(card, index) {
+        embedStates[card].fields.splice(index, 1);
+        renderFields(card);
+        updatePreview(card);
+      }
+
+      function renderFields(card) {
+        const container = document.getElementById(`fields-${card}`);
+        if (!container) return;
+        container.innerHTML = '';
+        embedStates[card].fields.forEach((field, idx) => {
+          const row = document.createElement('div');
+          row.className = 'field-row';
+          row.innerHTML = `
+            <div class="field-header">
+              <input type="text" data-i18n-placeholder="greetings.field_name" placeholder="${t('greetings.field_name', 'Field name')}" value="${field.name.replace(/"/g,'&quot;')}">
+              <label class="field-inline-label"><input type="checkbox" ${field.inline ? 'checked' : ''}> ${t('greetings.inline', 'inline')}</label>
+              <button class="field-remove"><i class="fas fa-times"></i></button>
+            </div>
+            <textarea data-i18n-placeholder="greetings.field_value" placeholder="${t('greetings.field_value', 'Field value')}" maxlength="1024">${field.value.replace(/"/g,'&quot;')}</textarea>
+          `;
+          container.appendChild(row);
+
+          const nameInput = row.querySelector('input[type="text"]');
+          const valueInput = row.querySelector('textarea');
+          const inlineCheck = row.querySelector('input[type="checkbox"]');
+          nameInput.addEventListener('input', () => { embedStates[card].fields[idx].name = nameInput.value; updatePreview(card); });
+          valueInput.addEventListener('input', () => { embedStates[card].fields[idx].value = valueInput.value; updatePreview(card); });
+          inlineCheck.addEventListener('change', () => { embedStates[card].fields[idx].inline = inlineCheck.checked; updatePreview(card); });
+          row.querySelector('.field-remove').addEventListener('click', () => removeField(card, idx));
+        });
+        document.getElementById(`fieldCounter-${card}`).innerText = `${embedStates[card].fields.length}/25`;
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      }
+
+      function updatePreview(card) {
+        const previewEl = document.getElementById(`embed-preview-${card}`);
+        if (!previewEl) return;
+        const state = embedStates[card];
+        const left = document.querySelector(`.editor-fields[data-card="${card}"]`);
+        if (left) {
+          state.authorName = left.querySelector('.embed-author-name')?.value || '';
+          state.authorIcon = left.querySelector('.embed-author-icon')?.value || '';
+          state.authorUrl = left.querySelector('.embed-author-url')?.value || '';
+          state.title = left.querySelector('.embed-title-input')?.value || '';
+          state.titleUrl = left.querySelector('.embed-title-url')?.value || '';
+          state.description = left.querySelector('.embed-description-input')?.value || '';
+          state.image = left.querySelector('.embed-image')?.value || '';
+          state.thumbnail = left.querySelector('.embed-thumbnail-url')?.value || '';
+          state.footerText = left.querySelector('.embed-footer-text')?.value || '';
+          state.footerIcon = left.querySelector('.embed-footer-icon')?.value || '';
+        }
+        let html = `<div class="discord-embed"><div class="embed-color-strip" style="background:${state.color};"></div><div class="embed-content">`;
+        if (state.authorName) {
+          html += `<div class="embed-author">`;
+          if (state.authorIcon) html += `<img src="${state.authorIcon}" onerror="this.style.display='none'">`;
+          html += `<span>${state.authorName}</span></div>`;
+        }
+        if (state.title) {
+          if (state.titleUrl) html += `<a href="${state.titleUrl}" style="text-decoration:none;">`;
+          html += `<div class="embed-title">${state.title}</div>`;
+          if (state.titleUrl) html += `</a>`;
+        }
+        if (state.thumbnail) html += `<img src="${state.thumbnail}" class="embed-thumbnail" onerror="this.style.display='none'">`;
+        if (state.description) html += `<div class="embed-description">${state.description.replace(/\n/g,'<br>')}</div>`;
+        if (state.fields.length > 0) {
+          html += `<div class="embed-fields">`;
+          state.fields.forEach(f => {
+            const cls = f.inline ? 'inline' : '';
+            html += `<div class="embed-field ${cls}"><span class="field-name">${f.name||' '}</span><span class="field-value">${f.value||' '}</span></div>`;
+          });
+          html += `</div>`;
+        }
+        if (state.image) html += `<div class="embed-image"><img src="${state.image}" onerror="this.style.display='none'"></div>`;
+        if (state.footerText || state.footerIcon || state.timestamp) {
+          html += `<div class="embed-footer">`;
+          if (state.footerIcon) html += `<img src="${state.footerIcon}" onerror="this.style.display='none'">`;
+          html += `<span>${state.footerText||''}</span>`;
+          if (state.timestamp) {
+            const d = new Date(state.timestamp);
+            html += `<span class="embed-timestamp"> • ${d.toLocaleDateString()} ${d.toLocaleTimeString()}</span>`;
+          }
+          html += `</div>`;
+        }
+        html += `</div></div>`;
+        previewEl.innerHTML = html;
+      }
+
+      function importEmbed(card) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = e => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const data = JSON.parse(e.target.result);
+              Object.assign(embedStates[card], data);
+              const left = document.querySelector(`.editor-fields[data-card="${card}"]`);
+              if (left) {
+                left.querySelector('.embed-author-name').value = data.authorName || '';
+                left.querySelector('.embed-author-icon').value = data.authorIcon || '';
+                left.querySelector('.embed-author-url').value = data.authorUrl || '';
+                left.querySelector('.embed-title-input').value = data.title || '';
+                left.querySelector('.embed-title-url').value = data.titleUrl || '';
+                left.querySelector('.embed-description-input').value = data.description || '';
+                left.querySelector('.embed-image').value = data.image || '';
+                left.querySelector('.embed-thumbnail-url').value = data.thumbnail || '';
+                left.querySelector('.embed-footer-text').value = data.footerText || '';
+                left.querySelector('.embed-footer-icon').value = data.footerIcon || '';
+                if (data.timestamp) {
+                  document.getElementById(`timestampDisplay-${card}`).innerText = new Date(data.timestamp).toLocaleString();
+                }
+                if (data.color && pickrInstances[card]) pickrInstances[card].setColor(data.color);
+              }
+              renderFields(card);
+              updatePreview(card);
+            } catch (err) { showNotification(t('greetings.invalid_json', 'Invalid JSON'), 3000); }
+          };
+          reader.readAsText(e.target.files[0]);
+        };
+        input.click();
+      }
+
+      function exportEmbed(card) {
+        const blob = new Blob([JSON.stringify(embedStates[card])], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `embed-${card}.json`;
+        a.click();
+      }
+
+      function clearEmbed(card) {
+        embedStates[card] = {
+          authorName: '', authorIcon: '', authorUrl: '',
+          title: '', titleUrl: '', description: '',
+          fields: [], image: '', thumbnail: '',
+          footerText: '', footerIcon: '', timestamp: null, color: '#5865F2'
+        };
+        const left = document.querySelector(`.editor-fields[data-card="${card}"]`);
+        if (left) left.querySelectorAll('input, textarea').forEach(el => el.value = '');
+        if (pickrInstances[card]) pickrInstances[card].setColor('#5865F2');
+        renderFields(card);
+        updatePreview(card);
+      }
+
+      // Event listeners
+      document.querySelectorAll('.toggle-embed').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const card = e.currentTarget.dataset.type;
+          const wrapper = document.getElementById(`embed-wrapper-${card}`);
+          if (!wrapper) return;
+          if (!editorBuilt[card]) buildEmbedEditor(card);
+          wrapper.classList.toggle('expanded');
+          e.currentTarget.textContent = wrapper.classList.contains('expanded') ? t('greetings.hide_embed_builder', 'Hide embed builder') : t('greetings.show_embed_builder', 'Show embed builder');
+          if (wrapper.classList.contains('expanded')) updatePreview(card);
+        });
+      });
+
+      document.querySelectorAll('.save-message').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const card = e.target.dataset.type;
+          const apiType = typeMap[card];
+          if (!apiType) return;
+          const textarea = document.querySelector(`textarea[data-type="${card}"]`);
+          const content = textarea.value;
+
+          const data = {
+            content: content || null,
+            use_embed: (embedStates[card].title || embedStates[card].description || embedStates[card].fields.length > 0) ? 1 : 0,
+            embed_title: embedStates[card].title || null,
+            embed_description: embedStates[card].description || null,
+            embed_color: embedStates[card].color || null,
+            embed_footer: embedStates[card].footerText || null,
+            embed_thumbnail: embedStates[card].thumbnail || null,
+            embed_image: embedStates[card].image || null,
+            embed_author: embedStates[card].authorName || null,
+            embed_author_icon: embedStates[card].authorIcon || null,
+            embed_author_url: embedStates[card].authorUrl || null,
+            embed_title_url: embedStates[card].titleUrl || null,
+            embed_footer_icon: embedStates[card].footerIcon || null,
+            embed_timestamp: embedStates[card].timestamp || null,
+            embed_fields: JSON.stringify(embedStates[card].fields)
+          };
+
+          try {
+            const isDM = apiType.includes('_dm');
+            const endpoint = isDM ? `/api/guilds/${guildId}/greetings/dm-messages/${apiType}` : `/api/guilds/${guildId}/greetings/messages/${apiType}`;
+            await apiFetch(endpoint, { method: 'POST', body: JSON.stringify(data) });
+            showNotification(t('greetings.message_saved', 'Message saved successfully!'), 3000);
+            await loadMessage(card);
+          } catch (err) {
+            showNotification(t('greetings.save_failed', 'Save failed: ') + err.message, 4000);
+          }
+        });
+      });
+
+      document.querySelectorAll('.test-message').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const type = e.target.dataset.type;
+          const isDM = e.target.dataset.dm === 'true';
+          try {
+            const result = await apiFetch(`/api/guilds/${guildId}/greetings/test`, { method: 'POST', body: JSON.stringify({ type, isDM }) });
+            if (result.success) {
+              showNotification(t('greetings.test_sent', 'Test message sent!'), 3000);
+            } else {
+              showNotification(t('greetings.test_failed', 'Test failed: ') + result.message, 4000);
+            }
+          } catch (err) {
+            showNotification(t('greetings.test_error', 'Test error: ') + err.message, 4000);
+          }
+        });
+      });
+
+      document.querySelectorAll('.clear-message').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const card = e.target.dataset.type;
+          document.querySelector(`textarea[data-type="${card}"]`).value = '';
+          const confirmed = await showConfirmModal(
+            t('greetings.clear_embed_fields', 'Clear Embed Fields'),
+            t('greetings.confirm_clear_embed', 'Are you sure you want to clear all embed fields?')
+          );
+          if (confirmed) {
+            clearEmbed(card);
+            showNotification(t('greetings.embed_fields_cleared', 'Embed fields cleared'), 3000);
+          }
+        });
+      });
+
+      document.getElementById('saveChannelSettings').addEventListener('click', async () => {
+        const settings = {
+          welcome_channel_id: document.getElementById('welcomeChannelSelect').value || null,
+          farewell_channel_id: document.getElementById('farewellChannelSelect').value || null
+        };
+        try {
+          await apiFetch(`/api/guilds/${guildId}/greetings/settings`, { method: 'POST', body: JSON.stringify(settings) });
+          showNotification(t('greetings.welcome_farewell_saved', 'Welcome/Farewell channel settings saved!'), 3000);
+        } catch (err) {
+          showNotification(t('greetings.save_failed', 'Save failed: ') + err.message, 4000);
+        }
+      });
+
+      document.getElementById('saveBanKickChannels').addEventListener('click', async () => {
+        const settings = {
+          ban_channel_id: document.getElementById('banChannelSelect').value || null,
+          kick_channel_id: document.getElementById('kickChannelSelect').value || null
+        };
+        try {
+          await apiFetch(`/api/guilds/${guildId}/greetings/settings`, { method: 'POST', body: JSON.stringify(settings) });
+          showNotification(t('greetings.ban_kick_saved', 'Ban/Kick channel settings saved!'), 3000);
+        } catch (err) {
+          showNotification(t('greetings.save_failed', 'Save failed: ') + err.message, 4000);
+        }
+      });
+
+      // Initialize
+      (async () => {
+        await loadChannels();
+        await loadSettings();
+        for (const card of cards) {
+          await loadMessage(card);
+        }
+        buildEmbedEditor('welcome');
+        updatePreview('welcome');
+      })();
+    })();
+  </script>
+</div>

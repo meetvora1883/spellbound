@@ -1,0 +1,277 @@
+<!-- warboard-view.html – Warboard Viewer with Theme Colors -->
+<div class="warboard-view-panel">
+  <style>
+    :root {
+      --bg0: #071027;
+      --bg1: #0b1736;
+      --panel: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.10);
+      --text: #e7eefc;
+      --muted: #9aa8c7;
+      --accent: #5b6bff;
+      --accent2: #7c5cff;
+      --good: #22c55e;
+      --shadow: 0 16px 40px rgba(0,0,0,.45);
+      --r: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(124,92,255,.25), transparent 60%),
+        radial-gradient(900px 500px at 85% 35%, rgba(91,107,255,.20), transparent 60%),
+        radial-gradient(1100px 700px at 60% 100%, rgba(34,197,94,.12), transparent 65%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .warboard-view-panel {
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ========== GLOW BUTTON ========== */
+    .glow-btn {
+      position: relative;
+      z-index: 0;
+      border: none;
+      outline: none;
+      color: #fff;
+      background: #111;
+      cursor: pointer;
+      border-radius: 10px;
+      overflow: visible;
+      padding: 10px 24px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .glow-btn::before {
+      content: '';
+      position: absolute;
+      top: -2px; left: -2px;
+      width: calc(100% + 4px);
+      height: calc(100% + 4px);
+      background: linear-gradient(45deg,
+        #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5,
+        #002bff, #7a00ff, #ff00c8, #ff0000);
+      background-size: 400%;
+      border-radius: inherit;
+      z-index: -1;
+      filter: blur(5px);
+      animation: glowing 20s linear infinite;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    .glow-btn:hover::before { opacity: 1; }
+
+    @keyframes glowing {
+      0%   { background-position: 0 0; }
+      50%  { background-position: 400% 0; }
+      100% { background-position: 0 0; }
+    }
+
+    .view-header {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .view-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-close {
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 8px 16px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+      text-decoration: none;
+    }
+    .btn-close:hover {
+      background: rgba(255,255,255,.15);
+    }
+    .preview-card {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .preview-content {
+      background: rgba(0,0,0,.3);
+      border-radius: 8px;
+      padding: 20px;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      color: #dcddde;
+      border-left: 4px solid var(--accent);
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: var(--muted);
+    }
+  </style>
+
+  <div class="view-header">
+    <div class="view-title">
+      <i class="fas fa-calendar-alt"></i>
+      <span data-i18n="warboard_view.title">Warboard</span>
+      <span id="dateDisplay"></span>
+    </div>
+    <button class="btn-close glow-btn" onclick="window.close()">
+      <i class="fas fa-times"></i> <span data-i18n="common.close">Close</span>
+    </button>
+  </div>
+
+  <div class="preview-card">
+    <div id="previewContainer" class="preview-content" data-i18n="common.loading">Loading warboard...</div>
+  </div>
+</div>
+
+<script src="/js/i18n-frontend.js"></script>
+<script>
+  // Run translations first, then load warboard data
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof window.applyTranslations === 'function') {
+      await window.applyTranslations();
+    }
+    
+    // Helper translation shortcut
+    const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+
+    if (typeof apiFetch === 'undefined') {
+      window.apiFetch = async function(path, options = {}) {
+        const res = await fetch(path, {
+          ...options,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', ...options.headers }
+        });
+        if (res.status === 401) {
+          window.location.href = '/login.html';
+          return null;
+        }
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || `${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        } else {
+          const text = await res.text();
+          if (!res.ok) throw new Error(`${res.status}: ${text}`);
+          return { success: true, message: text };
+        }
+      };
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const guildId = urlParams.get('guild');
+    const date = urlParams.get('date');
+    if (!guildId || !date) {
+      alert('Missing guild or date');
+      window.close();
+      return;
+    }
+
+    document.getElementById('dateDisplay').textContent = date;
+
+    const previewContainer = document.getElementById('previewContainer');
+
+    const BASES = [
+      { name: 'MAINGATE', capacity: 6 },
+      { name: 'CITADELLE', capacity: 9 },
+      { name: 'EASTBRIDGE', capacity: 3 },
+      { name: 'CENTRALBRIDGE', capacity: 3 },
+      { name: 'WESTBRIDGE', capacity: 3 },
+      { name: 'TOWER OF ELEMENTS', capacity: 3 },
+      { name: 'TOWER OF FORESIGHT', capacity: 3 },
+      { name: 'SCRIPTORIUM', capacity: 3 },
+      { name: 'LABORATORY', capacity: 3 },
+      { name: 'DOCks', capacity: 2 },
+      { name: 'BOATHOUSE', capacity: 2 }
+    ];
+
+    function buildPreviewMessage(assignments) {
+      if (!assignments || assignments.length === 0) {
+        return t('warboard_assign.no_assignments_preview', 'No assignments for this date.');
+      }
+
+      const baseMap = new Map();
+      BASES.forEach(b => baseMap.set(b.name, []));
+      assignments.forEach(a => {
+        if (baseMap.has(a.base)) baseMap.get(a.base).push(a);
+      });
+
+      let totalMight = 0;
+      assignments.forEach(a => totalMight += parseFloat(a.might || 0));
+
+      let message = `⚔️ ${t('warboard_assign.warboard_title', 'WARBOARD')} - ${date}\n\n`;
+
+      BASES.forEach(base => {
+        const assigned = baseMap.get(base.name) || [];
+        const count = assigned.length;
+        const capacity = base.capacity;
+
+        message += `**${base.name}** (${count}/${capacity})\n`;
+
+        if (assigned.length === 0) {
+          message += `*${t('warboard_assign.no_players_assigned', 'No players assigned')}*\n`;
+        } else {
+          assigned.forEach(a => {
+            const formattedMight = parseFloat(a.might || 0).toLocaleString();
+            const playerDisplay = a.username || (a.user_id ? `<@${a.user_id}>` : 'Unknown');
+            message += `${playerDisplay} - ${formattedMight} ${t('warboard_assign.might_unit', 'Might')}\n`;
+          });
+        }
+        message += '\n';
+      });
+
+      const totalPlayers = assignments.length;
+      const formattedTotalMight = totalMight.toLocaleString();
+      message += `**${t('warboard_assign.total', 'TOTAL')}:** ${totalPlayers} ${t('warboard_assign.players', 'players')} - ${formattedTotalMight} ${t('warboard_assign.might_unit', 'might')}`;
+
+      return message;
+    }
+
+    async function loadAssignments() {
+      try {
+        const assignments = await apiFetch(`/api/warboards/${encodeURIComponent(date)}?guildId=${guildId}`);
+        previewContainer.textContent = buildPreviewMessage(assignments);
+      } catch (err) {
+        previewContainer.textContent = t('common.error', 'Error loading warboard: ') + err.message;
+      }
+    }
+
+    loadAssignments();
+  });
+</script>

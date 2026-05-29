@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Member Portal – Warboard</title>
+  <link rel="icon" href="/favicon.ico">
+  <script src="/favicon.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root{
+      --bg0:#071027;
+      --bg1:#0b1736;
+      --panel: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.10);
+      --text:#e7eefc;
+      --muted:#9aa8c7;
+      --accent:#5b6bff;
+      --accent2:#7c5cff;
+      --good:#22c55e;
+      --shadow: 0 16px 40px rgba(0,0,0,.45);
+      --r: 16px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+    html,body{height:100%}
+    body{
+      min-height:100vh;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(124,92,255,.25), transparent 60%),
+        radial-gradient(900px 500px at 85% 35%, rgba(91,107,255,.20), transparent 60%),
+        radial-gradient(1100px 700px at 60% 100%, rgba(34,197,94,.12), transparent 65%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      display:flex;
+      flex-direction:column;
+    }
+    a{color:inherit;text-decoration:none}
+    .layout{display:flex;flex:1;min-height:0;}
+
+    /* TOP BAR */
+    .topbar{
+      height:62px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 20px;
+      background:rgba(255,255,255,.06);
+      border-bottom:1px solid rgba(255,255,255,.10);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(14px);
+    }
+    .top-left{display:flex;align-items:center;gap:12px;}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.6px;}
+    .brand .logo{width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg, rgba(124,92,255,.95), rgba(91,107,255,.95));border:1px solid rgba(255,255,255,.18);background-size: cover;background-position: center;}
+    .brand span{font-size:13px;text-transform:uppercase;}
+
+    .top-right{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted);}
+    .icon-btn{
+      background: rgba(255,255,255,.1);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 6px 10px;
+      transition: background 0.2s;
+      margin-right: 8px;
+    }
+    .icon-btn:hover{background:rgba(255,255,255,.2);}
+
+    .user{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .user .mini{
+      width:34px;height:34px;
+      border-radius:999px;
+      background:linear-gradient(135deg, rgba(34,197,94,.95), rgba(91,107,255,.95));
+      border:1px solid rgba(255,255,255,.16);
+      background-size: cover;
+      background-position: center;
+      flex-shrink:0;
+    }
+    .user-menu-wrap{position:relative;}
+    .user-menu-btn{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:rgba(15,23,42,.6);
+      border:1px solid rgba(148,163,184,.3);
+      cursor:pointer;
+      color:var(--text);
+    }
+    .user-menu-btn .chevron{font-size:10px;}
+    .user-dropdown{
+      position:absolute;
+      right:0;
+      top:calc(100% + 6px);
+      min-width:160px;
+      background:rgba(15,23,42,.98);
+      border:1px solid rgba(148,163,184,.45);
+      border-radius:12px;
+      box-shadow:var(--shadow);
+      padding:6px 0;
+      display:none;
+      z-index:20;
+    }
+    .user-dropdown.open{display:block;}
+    .user-dropdown a{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      color:var(--text);
+      font-size:13px;
+    }
+    .user-dropdown a:hover{background:rgba(31,41,55,.9);}
+
+    /* SIDEBAR */
+    .sidebar{
+      width:240px;
+      flex-shrink:0;
+      background:rgba(15,23,42,.95);
+      border-right:1px solid rgba(148,163,184,.35);
+      display:flex;
+      flex-direction:column;
+      overflow-y:auto;
+    }
+    .sidebar-inner{padding:16px 12px 20px;}
+    .sidebar-cat{margin-bottom:6px;}
+    .sidebar-cat-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:8px 10px;
+      font-size:0.72rem;
+      letter-spacing:0.14em;
+      text-transform:uppercase;
+      color:#6b7280;
+      cursor:pointer;
+      border-radius:8px;
+    }
+    .sidebar-cat-head .chevron{font-size:10px;}
+    .sidebar-cat-items{margin-top:2px;}
+    .sidebar-item{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:8px;
+      color:#9ca3af;
+      cursor:pointer;
+      font-size:0.88rem;
+    }
+    .sidebar-item:hover{background:#0b1120;color:#e5e7eb;}
+    .sidebar-item.active{background:#111827;color:#e5e7eb;}
+    .sidebar-footer{
+      margin-top:auto;
+      padding:14px 12px;
+      border-top:1px solid #111827;
+      font-size:0.75rem;
+      color:#6b7280;
+    }
+
+    /* MAIN */
+    .main{
+      flex:1;
+      min-width:0;
+      padding:20px 24px 24px;
+      overflow:auto;
+    }
+    .panel{
+      background:rgba(15,23,42,.9);
+      border-radius:var(--r);
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    .panel-head{
+      padding:14px 18px;
+      border-bottom:1px solid rgba(15,23,42,.9);
+      background:rgba(15,23,42,1);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-size:0.9rem;
+      font-weight:600;
+    }
+    .panel-body{padding:18px;}
+    .btn{
+      padding:10px 18px;
+      border-radius:10px;
+      border:none;
+      cursor:pointer;
+      font-size:0.82rem;
+      font-weight:600;
+      transition:background .12s;
+    }
+    .btn-primary{background:var(--accent);color:#fff;}
+    .btn-primary:hover{background:var(--accent2);}
+    .content-iframe{width:100%;border:none;min-height:600px;background:transparent;}
+    .loading{text-align:center;padding:40px;color:var(--muted);}
+    .error-message{color:#ff6b6b;text-align:center;padding:20px;}
+    .info-message{color:var(--accent);text-align:center;padding:30px;font-size:1.1rem;}
+    .sidebar-disabled .sidebar-item { opacity: 0.5; pointer-events: none; }
+
+    body { user-select: none; }
+    input, textarea, [contenteditable="true"] { user-select: text; }
+
+    /* ========== THEMED SCROLLBAR ========== */
+    * { scrollbar-width: thin; scrollbar-color: var(--accent) rgba(0,0,0,0.3); }
+    *::-webkit-scrollbar { width: 8px; height: 8px; }
+    *::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
+    *::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+    *::-webkit-scrollbar-thumb:hover { background: var(--accent2); }
+
+    /* Viewing banner */
+    #viewingBanner {
+      background: var(--accent);
+      color: white;
+      padding: 8px 20px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+    #viewingBanner button {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.5);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    #viewingBanner button:hover {
+      background: rgba(255,255,255,0.3);
+    }
+      
+      
+      /* Remove blue highlight (mobile + desktop) */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Remove focus outline globally */
+*:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* ===== Enhanced Animated Button (Theme Matched) ===== */
+.btn {
+  --color: var(--accent);      /* uses your existing theme */
+  --color2: #ffffff;
+
+  padding: 10px 18px;
+  background-color: transparent;
+  border-radius: 10px;
+  border: 1px solid var(--color);
+
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 1;
+
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--color);
+
+  transition: 
+    transform 0.12s ease,
+    filter 0.2s ease,
+    color 0.3s ease;
+}
+
+/* Background animation layers */
+.btn::after,
+.btn::before {
+  content: '';
+  position: absolute;
+  width: 140%;
+  height: 140%;
+  background: var(--color);
+  z-index: -1;
+  transition: 0.4s ease;
+}
+
+/* Top layer */
+.btn::after {
+  top: -100%;
+  left: -100%;
+  transform: rotate(45deg);
+}
+
+/* Bottom layer */
+.btn::before {
+  bottom: -100%;
+  right: -100%;
+  transform: rotate(45deg);
+}
+
+/* Hover animation */
+.btn:hover::after {
+  top: 0;
+  left: 0;
+}
+
+.btn:hover::before {
+  bottom: 0;
+  right: 0;
+}
+
+.btn:hover {
+  color: var(--color2);
+  transform: translateY(-1px);
+}
+
+/* Click / press */
+.btn:active {
+  transform: scale(0.97);
+  filter: brightness(0.9);
+}
+      
+      
+  </style>
+</head>
+<body>
+  <!-- Viewing Banner (hidden by default) -->
+  <div id="viewingBanner" style="display: none;">
+    <i class="fas fa-eye"></i> Viewing as <span id="viewingName"></span>
+    <button id="stopViewingBtn">Stop Viewing</button>
+  </div>
+
+  <!-- Member Switcher Modal -->
+  <div id="memberSwitcherModal" class="modal" style="display:none;">
+    <div class="modal-content" style="width: 500px; max-width: 90%;">
+      <div class="modal-header">
+        <h3>Select a Member</h3>
+        <span class="close-modal" onclick="closeMemberSwitcher()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="memberSearch" class="field-input" placeholder="Search by name..." style="margin-bottom: 15px;">
+        <div id="memberList" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--stroke); border-radius: 8px; padding: 8px;"></div>
+        <div id="memberLoading" class="loading" style="display:none;">Loading members...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeMemberSwitcher()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="top-left">
+      <div class="brand">
+        <div class="logo" id="botAvatar"></div>
+        <span id="botName">Loading...</span>
+      </div>
+    </div>
+    <div class="top-right">
+      <!-- Member switcher button (owner only) -->
+      <button class="icon-btn" id="memberSwitcherBtn" title="Select a member" style="display:none;">
+        <i class="fas fa-user-friends"></i>
+      </button>
+      <!-- Admin Dashboard button (owner only) -->
+      <button class="icon-btn" id="adminDashboardBtn" title="Admin Dashboard" style="display:none;">
+        <i class="fas fa-tachometer-alt"></i>
+      </button>
+      <div class="user">
+        <div class="mini" id="userAvatar"></div>
+        <div class="user-menu-wrap">
+          <button class="user-menu-btn" id="userMenuBtn">
+            <span id="username">Loading...</span>
+            <span class="chevron">▾</span>
+          </button>
+          <div class="user-dropdown" id="userDropdown">
+            <a href="#" id="dashboardLink">🖥️ Member Dashboard</a>
+            <a href="#" id="adminDashboardLink" style="display:none;">👑 Admin Dashboard</a>
+            <a href="#" id="logoutBtn">🚪 Log out</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-inner">
+        <!-- Might category -->
+        <div class="sidebar-cat">
+          <div class="sidebar-cat-head">
+            <span>👤 My Might</span>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="sidebar-cat-items">
+            <div class="sidebar-item" data-section="my-might">
+              <span class="icon">📊</span>
+              <span>My Might History</span>
+            </div>
+            <div class="sidebar-item" data-section="submit-might">
+              <span class="icon">✏️</span>
+              <span>Submit Might Update</span>
+            </div>
+          </div>
+        </div>
+        <!-- Compare category -->
+        <div class="sidebar-cat">
+          <div class="sidebar-cat-head">
+            <span>📊 Compare</span>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="sidebar-cat-items">
+            <div class="sidebar-item" data-section="member-compare">
+              <span class="icon">📈</span>
+              <span>Compare Players</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+          Logged in as <b id="footerUsername">Loading...</b>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="mainContent">
+      <div class="loading">Loading...</div>
+    </main>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="confirmTitle">Confirm Action</h3>
+        <span class="close-modal" onclick="closeConfirmModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn btn-primary" id="confirmOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0; width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: rgba(15,23,42,0.98);
+      border: 1px solid rgba(148,163,184,0.45);
+      border-radius: 12px;
+      width: 400px;
+      max-width: 90%;
+      box-shadow: var(--shadow);
+      color: var(--text);
+    }
+    .modal-header {
+      padding: 16px;
+      border-bottom: 1px solid rgba(148,163,184,0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 { margin: 0; }
+    .close-modal {
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .close-modal:hover { color: var(--text); }
+    .modal-body { padding: 20px 16px; }
+    .modal-footer {
+      padding: 16px;
+      border-top: 1px solid rgba(148,163,184,0.2);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+  </style>
+
+  <!-- Notification Toast -->
+  <div id="notificationToast" class="notification-toast">
+    <span id="notificationMessage"></span>
+  </div>
+
+  <style>
+    .notification-toast {
+      position: fixed;
+      top: 20px;
+      right: -400px;
+      background-color: #22c55e;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      font-weight: 500;
+      z-index: 9999;
+      transition: right 0.4s ease-in-out;
+      max-width: 350px;
+      word-wrap: break-word;
+      border-left: 4px solid #15803d;
+      pointer-events: none;
+      user-select: none;
+    }
+    .notification-toast.show {
+      right: 20px;
+    }
+  </style>
+
+  <script>
+    // ==================== GLOBAL HELPERS ====================
+    const socket = io();
+
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (res.status === 401) {
+        window.location.href = '/login.html';
+        return null;
+      }
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text}`);
+      }
+      return res.json();
+    }
+
+    // Modal helpers
+    let confirmResolve = null;
+    function showConfirmModal(title, message) {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      document.getElementById('confirmModal').style.display = 'flex';
+      return new Promise((resolve) => { confirmResolve = resolve; });
+    }
+    function closeConfirmModal() {
+      document.getElementById('confirmModal').style.display = 'none';
+      if (confirmResolve) {
+        confirmResolve(false);
+        confirmResolve = null;
+      }
+    }
+    document.getElementById('confirmOkBtn')?.addEventListener('click', function() {
+      document.getElementById('confirmModal').style.display = 'none';
+      if (confirmResolve) {
+        confirmResolve(true);
+        confirmResolve = null;
+      }
+    });
+
+    function showNotification(message, duration = 3000) {
+      const toast = document.getElementById('notificationToast');
+      const msgSpan = document.getElementById('notificationMessage');
+      msgSpan.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    // ==================== PAGE INITIALISATION ====================
+    let guildId = null;
+    let user = null;
+    window.viewingUserId = null; // global for partials
+    window.isOwner = false;
+    window.isAdmin = false; // admin status for delete buttons
+    let viewingUserName = '';
+
+    async function loadUser() {
+      console.log('loadUser started');
+      user = await apiFetch('/auth/me');
+      if (!user) return;
+      document.getElementById('username').textContent = user.username;
+      document.getElementById('footerUsername').textContent = user.username;
+      if (user.avatar) {
+        document.getElementById('userAvatar').style.backgroundImage =
+          `url(https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png)`;
+      }
+      // Fetch owner ID from server
+      try {
+        const { ownerId } = await apiFetch('/api/owner/id');
+        window.isOwner = (user.id === ownerId);
+        console.log('Owner check result:', window.isOwner);
+      } catch (err) {
+        console.error('Failed to fetch owner ID:', err);
+        window.isOwner = false;
+      }
+      // Default viewing user is self
+      window.viewingUserId = user.id;
+      console.log('loadUser finished, user:', user.username);
+    }
+
+    // Fetch admin status for this guild
+    async function checkIfAdmin() {
+      if (!guildId) return;
+      try {
+        const { isAdmin } = await apiFetch(`/api/guilds/${guildId}/is-admin`);
+        window.isAdmin = isAdmin;
+        console.log('Admin check result:', window.isAdmin);
+      } catch (err) {
+        console.error('Failed to check admin status:', err);
+        window.isAdmin = false;
+      }
+    }
+
+    // Update viewing banner
+    function updateViewingBanner() {
+      const banner = document.getElementById('viewingBanner');
+      const nameSpan = document.getElementById('viewingName');
+      if (window.isOwner && window.viewingUserId && window.viewingUserId !== user?.id) {
+        nameSpan.textContent = viewingUserName || 'another user';
+        banner.style.display = 'flex';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
+    // Stop viewing
+    document.getElementById('stopViewingBtn')?.addEventListener('click', () => {
+      window.viewingUserId = user.id;
+      viewingUserName = '';
+      updateViewingBanner();
+      // Reload current section
+      const activeSection = document.querySelector('.sidebar-item.active')?.dataset.section;
+      if (activeSection) navigateTo(activeSection);
+    });
+
+    // Load bot info
+    apiFetch('/api/bot/info').then(bot => {
+      if (bot) {
+        document.getElementById('botName').textContent = bot.username;
+        if (bot.avatar) document.getElementById('botAvatar').style.backgroundImage = `url(${bot.avatar})`;
+      }
+    }).catch(err => console.error('Bot info error:', err));
+
+    // Dropdown toggle
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userDropdown = document.getElementById('userDropdown');
+    userMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      userDropdown.classList.toggle('open');
+    });
+    document.addEventListener('click', () => userDropdown.classList.remove('open'));
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      fetch('/auth/logout', { credentials: 'include' }).then(() => window.location.href = '/login.html');
+    });
+
+    // Dashboard links
+    document.getElementById('dashboardLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.href = '/member-dashboard.html';
+    });
+
+    // Admin dashboard link (inside dropdown) – kept for compatibility but we now also have a separate button
+    const adminDashboardLink = document.getElementById('adminDashboardLink');
+    // Admin dashboard button (separate)
+    const adminDashboardBtn = document.getElementById('adminDashboardBtn');
+
+    // Get guild ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    guildId = urlParams.get('guild');
+    console.log('Guild ID from URL:', guildId);
+    if (!guildId) {
+      console.log('No guild ID, redirecting to member dashboard');
+      window.location.href = '/member-dashboard.html';
+    } else {
+      document.body.classList.remove('sidebar-disabled');
+    }
+
+    // Sidebar navigation
+    async function navigateTo(section) {
+      console.log('navigateTo called with section:', section);
+      if (!guildId) {
+        showNotification('No guild available.', 3000);
+        return;
+      }
+      const main = document.getElementById('mainContent');
+      let url = '';
+      switch (section) {
+        case 'my-might':
+          url = `/partials/member/member-might.html?guild=${guildId}`;
+          break;
+        case 'submit-might':
+          url = `/partials/member/member-might.html?guild=${guildId}&view=submit`;
+          break;
+        case 'member-compare':
+          url = `/partials/member/member-compare.html?guild=${guildId}`;
+          break;
+        default:
+          console.warn('Unknown section:', section);
+          return;
+      }
+      console.log('Fetching partial from:', url);
+      main.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const response = await fetch(url);
+        console.log('Response status:', response.status);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const html = await response.text();
+        main.innerHTML = html;
+        // Re-execute scripts inside the loaded content
+        Array.from(main.querySelectorAll('script')).forEach(oldScript => {
+          const newScript = document.createElement('script');
+          Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+          newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+          oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+        console.log('Partial loaded successfully');
+      } catch (err) {
+        console.error('Error loading partial:', err);
+        main.innerHTML = `<div class="error-message">Failed to load: ${err.message}</div>`;
+      }
+    }
+
+    function loadDefaultView() {
+      console.log('loadDefaultView: trying to click "my-might"');
+      const defaultItem = document.querySelector('.sidebar-item[data-section="my-might"]');
+      if (defaultItem) {
+        defaultItem.click();
+      } else {
+        console.error('Default sidebar item not found');
+        document.getElementById('mainContent').innerHTML = '<div class="error-message">Sidebar navigation missing</div>';
+      }
+    }
+
+    // Attach navigation to sidebar items
+    document.querySelectorAll('.sidebar-item[data-section]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const section = item.dataset.section;
+        console.log('Sidebar item clicked:', section);
+        navigateTo(section).then(() => {
+          document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+        });
+      });
+    });
+
+    // Listen for submission updates
+    socket.on('submissionUpdated', (data) => {
+      if (data.guildId === guildId) {
+        if (typeof window.loadHistory === 'function') window.loadHistory();
+        if (typeof window.loadPending === 'function') window.loadPending();
+      }
+    });
+
+    // ========== MEMBER SWITCHER (owner only) ==========
+    let allMembers = [];
+
+    async function loadAllMembers() {
+      allMembers = [];
+      let after = null;
+      let hasMore = true;
+      document.getElementById('memberLoading').style.display = 'block';
+      while (hasMore) {
+        let url = `/api/guilds/${guildId}/members?limit=100`;
+        if (after) url += `&after=${after}`;
+        try {
+          const res = await fetch(url, { credentials: 'include' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          allMembers = allMembers.concat(data.members);
+          after = data.next;
+          hasMore = data.hasMore;
+        } catch (err) {
+          console.error('Failed to load members:', err);
+          document.getElementById('memberList').innerHTML = `<div class="error-message">Error: ${err.message}</div>`;
+          document.getElementById('memberLoading').style.display = 'none';
+          return;
+        }
+      }
+      document.getElementById('memberLoading').style.display = 'none';
+      renderMemberList();
+    }
+
+    function renderMemberList() {
+      const search = document.getElementById('memberSearch').value.toLowerCase();
+      const filtered = allMembers.filter(m => 
+        (m.username && m.username.toLowerCase().includes(search)) ||
+        (m.nickname && m.nickname.toLowerCase().includes(search))
+      );
+      const list = document.getElementById('memberList');
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="info-msg" style="padding:20px;">No members found</div>';
+        return;
+      }
+      list.innerHTML = filtered.map(m => `
+        <div class="member-item" data-id="${m.id}" data-username="${m.username}" style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid var(--stroke); cursor:pointer;">
+          <img src="${m.avatar ? `https://cdn.discordapp.com/avatars/${m.id}/${m.avatar}.png` : ''}" style="width:32px; height:32px; border-radius:50%; background:#333;">
+          <div style="flex:1;">
+            <div style="font-weight:600;">${m.nickname || m.username}</div>
+            <div style="font-size:0.8rem; color:var(--muted);">${m.username}</div>
+          </div>
+        </div>
+      `).join('');
+      document.querySelectorAll('.member-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = item.dataset.id;
+          const username = item.dataset.username;
+          window.viewingUserId = id;
+          viewingUserName = username;
+          showNotification(`Now viewing as ${username}`, 3000);
+          closeMemberSwitcher();
+          updateViewingBanner();
+          const activeSection = document.querySelector('.sidebar-item.active')?.dataset.section;
+          if (activeSection) navigateTo(activeSection);
+        });
+      });
+    }
+
+    function openMemberSwitcher() {
+      document.getElementById('memberSwitcherModal').style.display = 'flex';
+      document.getElementById('memberList').innerHTML = '';
+      document.getElementById('memberSearch').value = '';
+      loadAllMembers();
+    }
+
+    function closeMemberSwitcher() {
+      document.getElementById('memberSwitcherModal').style.display = 'none';
+    }
+
+    document.getElementById('memberSearch')?.addEventListener('input', renderMemberList);
+    document.getElementById('memberSwitcherModal')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeMemberSwitcher();
+    });
+
+    // ========== INITIALISE ==========
+    (async () => {
+      console.log('Initializing members-server.html');
+      await loadUser();
+      window.user = user; // expose to partials
+
+      // Check admin status for this guild
+      await checkIfAdmin();
+
+      // Show owner-only elements
+      if (window.isOwner) {
+        console.log('User is owner – showing owner elements');
+        document.getElementById('memberSwitcherBtn').style.display = '';
+        document.getElementById('memberSwitcherBtn').addEventListener('click', openMemberSwitcher);
+
+        // Show admin dashboard button
+        if (adminDashboardBtn) {
+          adminDashboardBtn.style.display = '';
+          adminDashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/dashboard.html';
+          });
+          console.log('Admin dashboard button display set');
+        }
+
+        // Also show the dropdown link (optional)
+        if (adminDashboardLink) {
+          adminDashboardLink.style.display = 'flex';
+          adminDashboardLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/dashboard.html';
+          });
+        }
+      } else {
+        console.log('User is not owner');
+      }
+
+      if (guildId) {
+        loadDefaultView();
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your Servers - Warboard</title>
+  <link rel="icon" href="/favicon.ico">
+  <script src="/favicon.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root{
+      --bg0:#071027;
+      --bg1:#0b1736;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.08);
+      --stroke: rgba(255,255,255,.10);
+      --stroke2: rgba(255,255,255,.14);
+      --text:#e7eefc;
+      --muted:#9aa8c7;
+      --muted2:#7f8db0;
+      --accent:#5b6bff;
+      --accent2:#7c5cff;
+      --good:#22c55e;
+      --shadow: 0 16px 40px rgba(0,0,0,.45);
+      --r: 16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(124,92,255,.25), transparent 60%),
+        radial-gradient(900px 500px at 85% 35%, rgba(91,107,255,.20), transparent 60%),
+        radial-gradient(1100px 700px at 60% 100%, rgba(34,197,94,.12), transparent 65%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+    }
+    .wrap{
+      max-width: 1220px;
+      margin: 26px auto 42px;
+      padding: 0 18px;
+    }
+    .topbar{
+      height:62px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 0 18px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      margin-bottom: 24px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:700;
+      letter-spacing:.6px;
+      opacity:.95;
+    }
+    .brand .logo{
+      width:28px;height:28px;
+      border-radius:10px;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 55%),
+        linear-gradient(135deg, rgba(124,92,255,.95), rgba(91,107,255,.95));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 10px 18px rgba(0,0,0,.28);
+    }
+    .brand span{font-size:13px;text-transform:uppercase}
+    .user{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color: var(--muted);
+      font-size:13px;
+    }
+    .user .mini{
+      width:34px;height:34px;
+      border-radius:999px;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 55%),
+        linear-gradient(135deg, rgba(34,197,94,.95), rgba(91,107,255,.95));
+      border:1px solid rgba(255,255,255,.16);
+    }
+    .user .moon{
+      width:34px;height:34px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      display:grid;place-items:center;
+      color: rgba(231,238,252,.85);
+      cursor:pointer;
+    }
+    .server-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .server-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+      backdrop-filter: blur(8px);
+      position: relative;
+    }
+    .server-card.locked {
+      cursor: not-allowed;
+      opacity: 0.6;
+      filter: grayscale(0.5);
+    }
+    .server-card:hover:not(.locked) {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+    }
+    .server-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      margin: 0 auto 12px;
+      background-size: cover;
+      background-position: center;
+      background-color: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .server-name {
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lock-icon {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 16px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+    .error-message {
+      background: rgba(255,0,0,0.2);
+      border: 1px solid red;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px 0;
+      color: #ffaaaa;
+    }
+    .hidden { display: none; }
+
+/* ===== Enhanced Animated Button (Theme Matched) ===== */
+.btn {
+  --color: var(--accent);      /* uses your existing theme */
+  --color2: #ffffff;
+
+  padding: 10px 18px;
+  background-color: transparent;
+  border-radius: 10px;
+  border: 1px solid var(--color);
+
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 1;
+
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--color);
+
+  transition: 
+    transform 0.12s ease,
+    filter 0.2s ease,
+    color 0.3s ease;
+}
+
+/* Background animation layers */
+.btn::after,
+.btn::before {
+  content: '';
+  position: absolute;
+  width: 140%;
+  height: 140%;
+  background: var(--color);
+  z-index: -1;
+  transition: 0.4s ease;
+}
+
+/* Top layer */
+.btn::after {
+  top: -100%;
+  left: -100%;
+  transform: rotate(45deg);
+}
+
+/* Bottom layer */
+.btn::before {
+  bottom: -100%;
+  right: -100%;
+  transform: rotate(45deg);
+}
+
+/* Hover animation */
+.btn:hover::after {
+  top: 0;
+  left: 0;
+}
+
+.btn:hover::before {
+  bottom: 0;
+  right: 0;
+}
+
+.btn:hover {
+  color: var(--color2);
+  transform: translateY(-1px);
+}
+
+/* Click / press */
+.btn:active {
+  transform: scale(0.97);
+  filter: brightness(0.9);
+}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" id="botAvatar"></div>
+        <span id="botName">Loading...</span>
+      </div>
+      <div class="user">
+        <div class="mini" id="userAvatar" title="User avatar"></div>
+        <div id="username">Loading...</div>
+        <div class="moon" title="Theme" onclick="toggleTheme()">◐</div>
+      </div>
+    </div>
+
+    <div id="errorDisplay" class="error-message hidden"></div>
+
+    <div class="server-grid" id="serverGrid">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (res.status === 401) {
+        window.location.href = '/login.html';
+        return null;
+      }
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text}`);
+      }
+      return res.json();
+    }
+
+    function showError(msg) {
+      const errorDiv = document.getElementById('errorDisplay');
+      errorDiv.textContent = msg;
+      errorDiv.classList.remove('hidden');
+      console.error(msg);
+    }
+
+    async function loadUser() {
+      try {
+        const user = await apiFetch('/auth/me');
+        if (!user) return;
+        document.getElementById('username').textContent = user.username;
+        if (user.avatar) {
+          document.getElementById('userAvatar').style.backgroundImage = `url(https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png)`;
+          document.getElementById('userAvatar').style.backgroundSize = 'cover';
+        }
+        return user;
+      } catch (err) {
+        showError('Failed to load user: ' + err.message);
+      }
+    }
+
+    async function loadBotInfo() {
+      try {
+        const bot = await apiFetch('/api/bot/info');
+        if (!bot) return;
+        document.getElementById('botName').textContent = bot.username;
+        if (bot.avatar) {
+          const avatar = document.getElementById('botAvatar');
+          avatar.style.backgroundImage = `url(${bot.avatar})`;
+          avatar.style.backgroundSize = "cover";
+          avatar.style.backgroundPosition = "center";
+        }
+      } catch (err) {
+        console.error('Failed to load bot info:', err);
+      }
+    }
+
+    async function loadGuilds() {
+      try {
+        const guilds = await apiFetch('/api/user/guilds-details');
+        const grid = document.getElementById('serverGrid');
+        grid.innerHTML = '';
+        if (!guilds || guilds.length === 0) {
+          grid.innerHTML = '<div style="grid-column:1/-1; text-align:center;">No servers found. You are not in any Discord servers?</div>';
+          return;
+        }
+
+        // Filter to only servers where bot is present
+        const mutualGuilds = guilds.filter(g => g.hasBot);
+
+        if (mutualGuilds.length === 0) {
+          grid.innerHTML = '<div style="grid-column:1/-1; text-align:center;">You are not in any server where the Warboard bot is present.</div>';
+          return;
+        }
+
+        mutualGuilds.forEach(g => {
+          const card = document.createElement('div');
+          card.className = 'server-card';
+          card.setAttribute('data-id', g.id);
+          
+          const iconDiv = document.createElement('div');
+          iconDiv.className = 'server-icon';
+          if (g.icon) {
+            iconDiv.style.backgroundImage = `url(https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png)`;
+          } else {
+            iconDiv.textContent = g.name.charAt(0).toUpperCase();
+          }
+          
+          const nameDiv = document.createElement('div');
+          nameDiv.className = 'server-name';
+          nameDiv.textContent = g.name;
+          
+          card.appendChild(iconDiv);
+          card.appendChild(nameDiv);
+          
+          card.addEventListener('click', () => {
+            localStorage.setItem('selectedGuildId', g.id);
+            window.location.href = `/members-server.html?guild=${g.id}`;
+          });
+          
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        showError('Failed to load guilds: ' + err.message);
+      }
+    }
+
+    function toggleTheme() {
+      alert('Theme toggle not implemented');
+    }
+
+    // Initial load
+    (async () => {
+      await loadBotInfo();
+      await loadUser();
+      await loadGuilds();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,631 @@
+<!-- partials/questions-manage.html -->
+<div class="panel">
+  <div class="panel-head">
+    <span data-i18n="questions_manage.title">📋 Manage Questions</span>
+  </div>
+  <div class="table-toolbar">
+    <span data-i18n="questions_manage.filter">Filter:</span>
+    <select id="statusFilter">
+      <option value="all" data-i18n="questions_manage.all">All</option>
+      <option value="draft" data-i18n="questions_manage.draft">Draft</option>
+      <option value="scheduled" data-i18n="questions_manage.scheduled">Scheduled</option>
+      <option value="sent" data-i18n="questions_manage.sent">Sent</option>
+      <option value="active" data-i18n="questions_manage.active">Active</option>
+      <option value="closed" data-i18n="questions_manage.closed">Closed</option>
+    </select>
+    <span style="flex:1;"></span>
+    <button class="btn btn-primary glow-btn" id="newQuestionBtn" data-i18n="questions_manage.new_question">➕ New Question</button>
+  </div>
+  <div class="table-wrap">
+    <table id="questionsTable">
+      <thead>
+        <tr>
+          <th data-i18n="questions_manage.id">ID</th>
+          <th data-i18n="questions_manage.title_th">Title</th>
+          <th data-i18n="questions_manage.status">Status</th>
+          <th data-i18n="questions_manage.options">Options</th>
+          <th data-i18n="questions_manage.responses">Responses</th>
+          <th data-i18n="questions_manage.created">Created</th>
+          <th data-i18n="questions_manage.scheduled_th">Scheduled</th>
+          <th data-i18n="questions_manage.actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="questionsBody">
+        <tr><td colspan="8" class="loading" data-i18n="common.loading">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- View Question Modal -->
+<div id="viewModal" class="modal" style="display:none;">
+  <div class="modal-content" style="width:600px;">
+    <div class="modal-header">
+      <h3><span data-i18n="questions_manage.view_question">View Question</span> #<span id="viewQuestionId"></span></h3>
+      <span class="close-modal" onclick="closeViewModal()">&times;</span>
+    </div>
+    <div class="modal-body" id="viewBody">
+      <div style="margin-bottom:15px;">
+        <div style="font-weight:600;" data-i18n="questions_manage.title">Title</div>
+        <div id="viewTitle"></div>
+      </div>
+      <div style="margin-bottom:15px;">
+        <div style="font-weight:600;" data-i18n="questions_manage.description">Description</div>
+        <div id="viewDescription"></div>
+      </div>
+      <div style="margin-bottom:15px;">
+        <div style="font-weight:600;" data-i18n="questions_manage.footer">Footer</div>
+        <div id="viewFooter"></div>
+      </div>
+      <div style="margin-bottom:15px;">
+        <div style="font-weight:600;" data-i18n="questions_manage.suffix">Suffix</div>
+        <div id="viewSuffix"></div>
+      </div>
+      <div style="margin-bottom:15px;">
+        <div style="font-weight:600;" data-i18n="questions_manage.max_responses">Max responses per user</div>
+        <div id="viewMax"></div>
+      </div>
+      <div style="margin-bottom:15px;">
+        <div style="font-weight:600;" data-i18n="questions_manage.options">Options</div>
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th data-i18n="questions_manage.label">Label</th>
+              <th data-i18n="questions_manage.emoji">Emoji</th>
+              <th data-i18n="questions_manage.answer">Answer</th>
+              <th data-i18n="questions_manage.style">Style</th>
+            </tr>
+          </thead>
+          <tbody id="viewOptions"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary glow-btn" onclick="closeViewModal()" data-i18n="common.close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Question Modal -->
+<div id="editModal" class="modal" style="display:none;">
+  <div class="modal-content" style="width:700px;">
+    <div class="modal-header">
+      <h3><span data-i18n="questions_manage.edit_question">Edit Question</span> #<span id="editQuestionId"></span></h3>
+      <span class="close-modal" onclick="closeEditModal()">&times;</span>
+    </div>
+    <div class="modal-body" style="max-height:400px; overflow-y:auto;">
+      <div class="field-block">
+        <div class="field-title" data-i18n="questions_manage.title_required">Title *</div>
+        <input type="text" id="editTitle" class="field-input" maxlength="256">
+      </div>
+      <div class="field-block">
+        <div class="field-title" data-i18n="questions_manage.description">Description</div>
+        <textarea id="editDescription" class="field-input" rows="2" maxlength="2000"></textarea>
+      </div>
+      <div class="field-block">
+        <div class="field-title" data-i18n="questions_manage.footer">Footer</div>
+        <input type="text" id="editFooter" class="field-input" maxlength="2048">
+      </div>
+      <div class="field-block">
+        <div class="field-title" data-i18n="questions_manage.suffix">Suffix</div>
+        <input type="text" id="editSuffix" class="field-input" maxlength="100">
+      </div>
+      <div class="field-block">
+        <div class="field-title" data-i18n="questions_manage.max_responses">Max responses per user</div>
+        <input type="number" id="editMax" class="field-input" min="0" value="1">
+      </div>
+      <hr style="border-color:#334155; margin:15px 0;">
+      <h4 data-i18n="questions_manage.options">Options</h4>
+      <div id="editOptionsContainer">
+        <!-- Options will be loaded here -->
+      </div>
+      <div class="field-block">
+        <button class="btn btn-primary glow-btn" id="addOptionInEdit" data-i18n="questions_manage.add_option">➕ Add Option</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary glow-btn" onclick="closeEditModal()" data-i18n="common.cancel">Cancel</button>
+      <button class="btn btn-success glow-btn" id="saveEditBtn" data-i18n="questions_manage.save_changes">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Send/Schedule Modal -->
+<div id="sendModal" class="modal" style="display:none;">
+  <div class="modal-content" style="width:500px;">
+    <div class="modal-header">
+      <h3><span data-i18n="questions_manage.send_question">Send Question</span> #<span id="sendQuestionId"></span></h3>
+      <span class="close-modal" onclick="closeSendModal()">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="field-block">
+        <div class="field-title" data-i18n="questions_manage.channel">Channel</div>
+        <input list="channelList" id="sendChannelInput" class="field-input" data-i18n-placeholder="questions_manage.type_channel" placeholder="Type or select a channel" autocomplete="off">
+        <datalist id="channelList"></datalist>
+        <div style="font-size:0.8rem; color:var(--muted); margin-top:4px;" data-i18n="questions_manage.channel_hint">Type part of the channel name, then select from the list.</div>
+      </div>
+      <div class="field-block">
+        <label>
+          <input type="checkbox" id="scheduleCheckbox"> <span data-i18n="questions_manage.schedule_later">Schedule for later</span>
+        </label>
+      </div>
+      <div id="scheduleFields" style="display:none;">
+        <div class="field-block">
+          <div class="field-title" data-i18n="questions_manage.date">Date</div>
+          <input type="date" id="sendDate" class="field-input" min="">
+        </div>
+        <div class="field-block">
+          <div class="field-title" data-i18n="questions_manage.time">Time (24h)</div>
+          <input type="time" id="sendTime" class="field-input" step="60">
+        </div>
+        <div class="field-block">
+          <div class="field-title" data-i18n="questions_manage.timezone">Timezone</div>
+          <select id="sendTimezone" class="field-input"></select>
+        </div>
+      </div>
+      <div id="sendError" style="color:#ff6b6b; margin-top:10px; display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary glow-btn" onclick="closeSendModal()" data-i18n="common.cancel">Cancel</button>
+      <button class="btn btn-primary glow-btn" id="sendConfirmBtn" data-i18n="questions_manage.send_now">Send Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- Results Modal -->
+<div id="resultsModal" class="modal" style="display:none;">
+  <div class="modal-content" style="width:700px;">
+    <div class="modal-header">
+      <h3><span data-i18n="questions_manage.results_for">Results for</span> #<span id="resultsQuestionId"></span></h3>
+      <span class="close-modal" onclick="closeResultsModal()">&times;</span>
+    </div>
+    <div class="modal-body" id="resultsBody" style="max-height:400px; overflow-y:auto;">
+      <span data-i18n="common.loading">Loading...</span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary glow-btn" onclick="closeResultsModal()" data-i18n="common.close">Close</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .scheduled-row { opacity: 0.6; font-style: italic; }
+  .status-icon { margin-right: 4px; }
+</style>
+
+<script>
+  (async function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const guildId = urlParams.get('guild');
+    let currentQuestions = [];
+    let timezones = [];
+    let channels = [];
+
+    // Translation shortcut
+    const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+
+    try { timezones = await apiFetch('/api/timezones'); } catch (e) { console.error(e); }
+
+    async function loadChannels() {
+      try {
+        channels = await apiFetch(`/api/guilds/${guildId}/channels`);
+        const datalist = document.getElementById('channelList');
+        datalist.innerHTML = channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
+      } catch (err) { console.error('Failed to load channels:', err); }
+    }
+
+    async function loadQuestions() {
+      const status = document.getElementById('statusFilter').value;
+      let url = `/api/guilds/${guildId}/questions`;
+      if (status !== 'all') url += `?status=${status}`;
+      try {
+        currentQuestions = await apiFetch(url);
+        renderTable();
+      } catch (err) {
+        document.getElementById('questionsBody').innerHTML = `<tr><td colspan="8" class="error-message">${err.message}</td></tr>`;
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('questionsBody');
+      if (currentQuestions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="no-logs" data-i18n="questions_manage.no_questions">${t('questions_manage.no_questions', 'No questions found')}</td></tr>`;
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+        return;
+      }
+      tbody.innerHTML = currentQuestions.map(q => {
+        const scheduledDate = q.scheduled_at ? new Date(q.scheduled_at).toLocaleString() : '';
+        let statusDisplay = '';
+        let rowClass = '';
+        if (q.status === 'scheduled') {
+          statusDisplay = `<i class="fas fa-clock status-icon"></i> ${t('questions_manage.status_scheduled', 'Scheduled')}`;
+          rowClass = 'scheduled-row';
+        } else if (q.status === 'sent') {
+          statusDisplay = `<i class="fas fa-check-circle status-icon" style="color:#22c55e;"></i> ${t('questions_manage.status_sent', 'Sent')}`;
+        } else if (q.status === 'active') {
+          statusDisplay = `<i class="fas fa-play-circle status-icon" style="color:#5b6bff;"></i> ${t('questions_manage.status_active', 'Active')}`;
+        } else if (q.status === 'closed') {
+          statusDisplay = `<i class="fas fa-stop-circle status-icon" style="color:#9ca3af;"></i> ${t('questions_manage.status_closed', 'Closed')}`;
+        } else {
+          statusDisplay = q.status;
+        }
+        return `
+          <tr class="${rowClass}">
+            <td>${q.id}</td>
+            <td>${q.title}</td>
+            <td>${statusDisplay}</td>
+            <td>${q.optionCount}</td>
+            <td>${q.responseCount}</td>
+            <td>${new Date(q.created_at).toLocaleDateString()}</td>
+            <td>${scheduledDate}</td>
+            <td>
+              <button class="btn btn-sm btn-info glow-btn" onclick="viewQuestion(${q.id})" data-i18n="questions_manage.view">👁️ ${t('questions_manage.view', 'View')}</button>
+              ${q.status === 'draft' ? `
+                <button class="btn btn-sm btn-warning glow-btn" onclick="editQuestion(${q.id})" data-i18n="questions_manage.edit">✏️ ${t('questions_manage.edit', 'Edit')}</button>
+                <button class="btn btn-sm btn-primary glow-btn" onclick="sendQuestion(${q.id})" data-i18n="questions_manage.send">📨 ${t('questions_manage.send', 'Send')}</button>
+              ` : ''}
+              ${q.status === 'sent' || q.status === 'closed' ? `
+                <button class="btn btn-sm btn-success glow-btn" onclick="startQuestion(${q.id})" data-i18n="questions_manage.start">▶ ${t('questions_manage.start', 'Start')}</button>
+              ` : ''}
+              ${q.status === 'active' ? `
+                <button class="btn btn-sm btn-warning glow-btn" onclick="stopQuestion(${q.id})" data-i18n="questions_manage.stop">⏹ ${t('questions_manage.stop', 'Stop')}</button>
+              ` : ''}
+              <button class="btn btn-sm btn-secondary glow-btn" onclick="viewResults(${q.id})" data-i18n="questions_manage.results">📊 ${t('questions_manage.results', 'Results')}</button>
+              <button class="btn btn-sm btn-info glow-btn" onclick="copyQuestion(${q.id})" data-i18n="questions_manage.copy">📋 ${t('questions_manage.copy', 'Copy')}</button>
+              <button class="btn btn-sm btn-danger glow-btn" onclick="deleteQuestion(${q.id})" data-i18n="questions_manage.delete">🗑 ${t('questions_manage.delete', 'Delete')}</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+    }
+
+    document.getElementById('statusFilter').addEventListener('change', loadQuestions);
+    await loadQuestions();
+
+    document.getElementById('newQuestionBtn').addEventListener('click', () => {
+      const createItem = document.querySelector('.sidebar-item[data-section="questions-create"]');
+      if (createItem) createItem.click();
+    });
+
+    // ========== VIEW MODAL ==========
+    window.viewQuestion = async (id) => {
+      try {
+        const q = await apiFetch(`/api/guilds/${guildId}/questions/${id}`);
+        document.getElementById('viewQuestionId').textContent = id;
+        document.getElementById('viewTitle').textContent = q.title || `(${t('common.none', 'none')})`;
+        document.getElementById('viewDescription').textContent = q.description || `(${t('common.none', 'none')})`;
+        document.getElementById('viewFooter').textContent = q.footer || `(${t('common.none', 'none')})`;
+        document.getElementById('viewSuffix').textContent = q.suffix || `(${t('common.none', 'none')})`;
+        document.getElementById('viewMax').textContent = q.max_interactions;
+        const tbody = document.getElementById('viewOptions');
+        if (q.options && q.options.length) {
+          tbody.innerHTML = q.options.map(opt => `
+            <tr>
+              <td>${opt.label}</td>
+              <td>${opt.emoji || ''}</td>
+              <td>${opt.answer_text || opt.answer_number || ''}</td>
+              <td>${opt.style}</td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = `<tr><td colspan="4" class="no-logs" data-i18n="questions_manage.no_options">${t('questions_manage.no_options', 'No options')}</td></tr>`;
+        }
+        document.getElementById('viewModal').style.display = 'flex';
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      } catch (err) {
+        alert(t('common.error', 'Error loading question: ') + err.message);
+      }
+    };
+    window.closeViewModal = () => document.getElementById('viewModal').style.display = 'none';
+
+    // ========== EDIT MODAL ==========
+    let editingQuestionId = null;
+
+    window.editQuestion = async (id) => {
+      editingQuestionId = id;
+      try {
+        const q = await apiFetch(`/api/guilds/${guildId}/questions/${id}`);
+        document.getElementById('editQuestionId').textContent = id;
+        document.getElementById('editTitle').value = q.title || '';
+        document.getElementById('editDescription').value = q.description || '';
+        document.getElementById('editFooter').value = q.footer || '';
+        document.getElementById('editSuffix').value = q.suffix || '';
+        document.getElementById('editMax').value = q.max_interactions;
+        renderEditOptions(q.options || []);
+        document.getElementById('editModal').style.display = 'flex';
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      } catch (err) {
+        alert(t('common.error', 'Error loading question for edit: ') + err.message);
+      }
+    };
+
+    function renderEditOptions(options) {
+      const container = document.getElementById('editOptionsContainer');
+      if (options.length === 0) {
+        container.innerHTML = `<p class="no-logs" data-i18n="questions_manage.no_options_yet">${t('questions_manage.no_options_yet', 'No options yet')}</p>`;
+        return;
+      }
+      container.innerHTML = options.map((opt, index) => `
+        <div class="edit-option" data-id="${opt.id}" style="border:1px solid #334155; border-radius:8px; padding:10px; margin-bottom:10px;">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <input type="text" class="field-input opt-label" placeholder="${t('questions_manage.label', 'Label')}" value="${opt.label}" style="flex:2;">
+            <input type="text" class="field-input opt-emoji" placeholder="${t('questions_manage.emoji', 'Emoji')}" value="${opt.emoji || ''}" style="flex:1;">
+            <input type="text" class="field-input opt-answer-text" placeholder="${t('questions_manage.answer_text', 'Answer text')}" value="${opt.answer_text || ''}" style="flex:2;">
+            <input type="number" class="field-input opt-answer-number" placeholder="${t('questions_manage.answer_number', 'Number')}" value="${opt.answer_number || ''}" style="flex:1;" step="any">
+            <select class="field-input opt-style" style="flex:1;">
+              <option value="primary" ${opt.style === 'primary' ? 'selected' : ''}>${t('questions_manage.style_primary', 'Primary')}</option>
+              <option value="secondary" ${opt.style === 'secondary' ? 'selected' : ''}>${t('questions_manage.style_secondary', 'Secondary')}</option>
+              <option value="success" ${opt.style === 'success' ? 'selected' : ''}>${t('questions_manage.style_success', 'Success')}</option>
+              <option value="danger" ${opt.style === 'danger' ? 'selected' : ''}>${t('questions_manage.style_danger', 'Danger')}</option>
+            </select>
+            <button class="btn btn-sm btn-danger delete-edit-option glow-btn" data-id="${opt.id}">🗑</button>
+          </div>
+        </div>
+      `).join('');
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      document.querySelectorAll('.delete-edit-option').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const optionId = btn.dataset.id;
+          const confirmed = await showConfirmModal(
+            t('questions_manage.delete_option', 'Delete Option'),
+            t('questions_manage.confirm_delete_option', 'Are you sure you want to delete this option?')
+          );
+          if (!confirmed) return;
+          try {
+            await apiFetch(`/api/guilds/${guildId}/questions/${editingQuestionId}/options/${optionId}`, { method: 'DELETE' });
+            const q = await apiFetch(`/api/guilds/${guildId}/questions/${editingQuestionId}`);
+            renderEditOptions(q.options || []);
+          } catch (err) {
+            alert(t('common.error', 'Error: ') + err.message);
+          }
+        });
+      });
+    }
+
+    document.getElementById('addOptionInEdit').addEventListener('click', () => {
+      const container = document.getElementById('editOptionsContainer');
+      const newOptionDiv = document.createElement('div');
+      newOptionDiv.className = 'edit-option';
+      newOptionDiv.setAttribute('data-id', 'temp_' + Date.now());
+      newOptionDiv.style = 'border:1px solid #334155; border-radius:8px; padding:10px; margin-bottom:10px;';
+      newOptionDiv.innerHTML = `
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="text" class="field-input opt-label" placeholder="${t('questions_manage.label', 'Label')}" value="" style="flex:2;">
+          <input type="text" class="field-input opt-emoji" placeholder="${t('questions_manage.emoji', 'Emoji')}" value="" style="flex:1;">
+          <input type="text" class="field-input opt-answer-text" placeholder="${t('questions_manage.answer_text', 'Answer text')}" value="" style="flex:2;">
+          <input type="number" class="field-input opt-answer-number" placeholder="${t('questions_manage.answer_number', 'Number')}" value="" style="flex:1;" step="any">
+          <select class="field-input opt-style" style="flex:1;">
+            <option value="primary" selected>${t('questions_manage.style_primary', 'Primary')}</option>
+            <option value="secondary">${t('questions_manage.style_secondary', 'Secondary')}</option>
+            <option value="success">${t('questions_manage.style_success', 'Success')}</option>
+            <option value="danger">${t('questions_manage.style_danger', 'Danger')}</option>
+          </select>
+          <button class="btn btn-sm btn-danger delete-edit-option glow-btn" data-id="temp_${Date.now()}">🗑</button>
+        </div>
+      `;
+      container.appendChild(newOptionDiv);
+      newOptionDiv.querySelector('.delete-edit-option').addEventListener('click', async (e) => {
+        const confirmed = await showConfirmModal(
+          t('questions_manage.delete_option', 'Delete Option'),
+          t('questions_manage.confirm_delete_unsaved_option', 'Are you sure you want to delete this unsaved option?')
+        );
+        if (!confirmed) return;
+        newOptionDiv.remove();
+      });
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+    });
+
+    document.getElementById('saveEditBtn').addEventListener('click', async () => {
+      const confirmed = await showConfirmModal(
+        t('questions_manage.save_changes', 'Save Changes'),
+        t('questions_manage.confirm_save_changes', 'Are you sure you want to save these changes?')
+      );
+      if (!confirmed) return;
+
+      const title = document.getElementById('editTitle').value.trim();
+      if (!title) return alert(t('questions_manage.title_required', 'Title required'));
+      const mainData = {
+        title,
+        description: document.getElementById('editDescription').value.trim() || null,
+        footer: document.getElementById('editFooter').value.trim() || null,
+        suffix: document.getElementById('editSuffix').value.trim() || '',
+        maxInteractions: parseInt(document.getElementById('editMax').value) || 1
+      };
+      try {
+        await apiFetch(`/api/guilds/${guildId}/questions/${editingQuestionId}`, { method: 'PATCH', body: JSON.stringify(mainData) });
+        const optionDivs = document.querySelectorAll('#editOptionsContainer .edit-option');
+        const optionsToSave = [];
+        for (const div of optionDivs) {
+          const label = div.querySelector('.opt-label')?.value.trim();
+          if (!label) continue;
+          const emoji = div.querySelector('.opt-emoji')?.value.trim() || null;
+          const answerText = div.querySelector('.opt-answer-text')?.value.trim() || null;
+          const answerNumber = div.querySelector('.opt-answer-number')?.value ? parseFloat(div.querySelector('.opt-answer-number').value) : null;
+          const style = div.querySelector('.opt-style')?.value || 'primary';
+          optionsToSave.push({ label, emoji, answerText, answerNumber, style });
+        }
+        const current = await apiFetch(`/api/guilds/${guildId}/questions/${editingQuestionId}`);
+        const existingIds = current.options.map(o => o.id);
+        for (const id of existingIds) {
+          await apiFetch(`/api/guilds/${guildId}/questions/${editingQuestionId}/options/${id}`, { method: 'DELETE' });
+        }
+        for (const opt of optionsToSave) {
+          await apiFetch(`/api/guilds/${guildId}/questions/${editingQuestionId}/options`, {
+            method: 'POST',
+            body: JSON.stringify({ label: opt.label, emoji: opt.emoji, answerText: opt.answerText, answerNumber: opt.answerNumber, style: opt.style })
+          });
+        }
+        showNotification(t('questions_manage.question_updated', 'Question updated'));
+        closeEditModal();
+        loadQuestions();
+      } catch (err) {
+        alert(t('common.error', 'Error saving: ') + err.message);
+      }
+    });
+
+    window.closeEditModal = () => document.getElementById('editModal').style.display = 'none';
+
+    // Copy question
+    window.copyQuestion = async (id) => {
+      const confirmed = await showConfirmModal(
+        t('questions_manage.copy_question', 'Copy Question'),
+        t('questions_manage.confirm_copy_question', 'Create a copy of this question (as draft)?')
+      );
+      if (!confirmed) return;
+      try {
+        const res = await apiFetch(`/api/guilds/${guildId}/questions/${id}/copy`, { method: 'POST' });
+        showNotification(t('questions_manage.question_copied', 'Question copied! New ID: ') + res.id);
+        loadQuestions();
+      } catch (err) {
+        alert(t('common.error', 'Error copying: ') + err.message);
+      }
+    };
+
+    // Send modal
+    let currentSendQuestionId = null;
+    window.sendQuestion = async (questionId) => {
+      currentSendQuestionId = questionId;
+      document.getElementById('sendQuestionId').textContent = questionId;
+      document.getElementById('scheduleCheckbox').checked = false;
+      document.getElementById('scheduleFields').style.display = 'none';
+      document.getElementById('sendConfirmBtn').textContent = t('questions_manage.send_now', 'Send Now');
+      document.getElementById('sendError').style.display = 'none';
+      await loadChannels();
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('sendDate').setAttribute('min', today);
+      if (document.getElementById('sendTimezone').options.length === 0 && timezones.length) {
+        const tzSelect = document.getElementById('sendTimezone');
+        tzSelect.innerHTML = timezones.map(tz => `<option value="${tz.value}">${tz.name}</option>`).join('');
+      }
+      document.getElementById('sendModal').style.display = 'flex';
+    };
+
+    document.getElementById('scheduleCheckbox').addEventListener('change', (e) => {
+      const show = e.target.checked;
+      document.getElementById('scheduleFields').style.display = show ? 'block' : 'none';
+      document.getElementById('sendConfirmBtn').textContent = show ? t('questions_manage.schedule', 'Schedule') : t('questions_manage.send_now', 'Send Now');
+    });
+
+    document.getElementById('sendConfirmBtn').addEventListener('click', async () => {
+      const channelInput = document.getElementById('sendChannelInput').value.trim();
+      let channelId = null;
+      const lowerInput = channelInput.toLowerCase();
+      const matchedChannel = channels.find(c => 
+        c.id === channelInput || c.name.toLowerCase() === lowerInput || c.name.toLowerCase().includes(lowerInput)
+      );
+      if (matchedChannel) channelId = matchedChannel.id;
+      if (!channelId) {
+        document.getElementById('sendError').textContent = t('questions_manage.select_valid_channel', 'Please select a valid channel from the list.');
+        document.getElementById('sendError').style.display = 'block';
+        return;
+      }
+
+      const isScheduled = document.getElementById('scheduleCheckbox').checked;
+      if (!isScheduled) {
+        try {
+          await apiFetch(`/api/guilds/${guildId}/questions/${currentSendQuestionId}/send`, { method: 'POST', body: JSON.stringify({ channelId }) });
+          showNotification(t('questions_manage.question_sent', 'Question sent'));
+          closeSendModal();
+          loadQuestions();
+        } catch (err) {
+          document.getElementById('sendError').textContent = err.message;
+          document.getElementById('sendError').style.display = 'block';
+        }
+      } else {
+        const date = document.getElementById('sendDate').value;
+        const time = document.getElementById('sendTime').value;
+        const timezone = document.getElementById('sendTimezone').value;
+        if (!date || !time || !timezone) {
+          document.getElementById('sendError').textContent = t('questions_manage.fill_all_fields', 'Please fill all fields.');
+          document.getElementById('sendError').style.display = 'block';
+          return;
+        }
+        const selectedDateTime = new Date(`${date}T${time}`);
+        if (selectedDateTime <= new Date()) {
+          document.getElementById('sendError').textContent = t('questions_manage.future_time_required', 'Scheduled time must be in the future.');
+          document.getElementById('sendError').style.display = 'block';
+          return;
+        }
+        try {
+          await apiFetch(`/api/guilds/${guildId}/questions/${currentSendQuestionId}/schedule`, { method: 'POST', body: JSON.stringify({ channelId, scheduledAt: `${date}T${time}`, timezone }) });
+          showNotification(t('questions_manage.question_scheduled', 'Question scheduled'));
+          closeSendModal();
+          loadQuestions();
+        } catch (err) {
+          document.getElementById('sendError').textContent = err.message;
+          document.getElementById('sendError').style.display = 'block';
+        }
+      }
+    });
+
+    window.closeSendModal = () => document.getElementById('sendModal').style.display = 'none';
+
+    // Other actions
+    window.startQuestion = async (id) => {
+      const confirmed = await showConfirmModal(
+        t('questions_manage.start_question', 'Start Question'),
+        t('questions_manage.confirm_start_question', 'Start this question? Buttons will be enabled.')
+      );
+      if (!confirmed) return;
+      try {
+        await apiFetch(`/api/guilds/${guildId}/questions/${id}/start`, { method: 'POST' });
+        loadQuestions();
+        showNotification(t('questions_manage.question_started', 'Question started'));
+      } catch (err) { alert(err.message); }
+    };
+
+    window.stopQuestion = async (id) => {
+      const confirmed = await showConfirmModal(
+        t('questions_manage.stop_question', 'Stop Question'),
+        t('questions_manage.confirm_stop_question', 'Stop this question? Buttons will be disabled.')
+      );
+      if (!confirmed) return;
+      try {
+        await apiFetch(`/api/guilds/${guildId}/questions/${id}/stop`, { method: 'POST', body: JSON.stringify({ removeButtons: false, showResults: false }) });
+        loadQuestions();
+        showNotification(t('questions_manage.question_stopped', 'Question stopped'));
+      } catch (err) { alert(err.message); }
+    };
+
+    window.deleteQuestion = async (id) => {
+      const confirmed = await showConfirmModal(
+        t('questions_manage.delete_question', 'Delete Question'),
+        t('questions_manage.confirm_delete_question', 'Permanently delete this question and all responses?')
+      );
+      if (!confirmed) return;
+      try {
+        await apiFetch(`/api/guilds/${guildId}/questions/${id}`, { method: 'DELETE' });
+        loadQuestions();
+        showNotification(t('questions_manage.question_deleted', 'Question deleted'));
+      } catch (err) { alert(err.message); }
+    };
+
+    window.viewResults = async (id) => {
+      try {
+        const data = await apiFetch(`/api/guilds/${guildId}/questions/${id}/results`);
+        document.getElementById('resultsQuestionId').textContent = id;
+        let html = `<h4>${data.question.title}</h4>`;
+        data.options.forEach(opt => {
+          const count = data.counts[opt.id] || 0;
+          const sum = data.sums[opt.id] || 0;
+          const users = data.usersByOption[opt.id] || [];
+          const userList = users.map(uid => (data.userMap || {})[uid] || uid).join(', ') || 'none';
+          html += `<div style="margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:8px;">
+            <b>${opt.label}</b>: ${count} ${t('questions_manage.response', 'response')}${count!==1?'s':''}
+            ${opt.answer_number !== null && data.question.suffix ? ` (${t('questions_manage.total', 'total')} ${sum}${data.question.suffix})` : ''}<br>
+            <span style="color:#94a3b8;">${t('questions_manage.users', 'Users')}: ${userList}</span>
+          </div>`;
+        });
+        if (data.totalSum > 0) html += `<p><b>${t('questions_manage.overall_total', 'Overall total')}:</b> ${data.totalSum}${data.question.suffix}</p>`;
+        document.getElementById('resultsBody').innerHTML = html;
+        document.getElementById('resultsModal').style.display = 'flex';
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      } catch (err) {
+        alert(t('common.error', 'Error loading results: ') + err.message);
+      }
+    };
+
+    window.closeResultsModal = () => document.getElementById('resultsModal').style.display = 'none';
+  })();
+</script>

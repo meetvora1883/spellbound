@@ -1,0 +1,326 @@
+<div class="compare-panel">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- No time adapter needed – we use numeric index -->
+  <style>
+    .compare-panel {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .selector-card {
+      background: var(--panel);
+      border-radius: var(--r);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .player-select-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .player-select-row select {
+      flex: 1;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 10px;
+      color: var(--text);
+    }
+    .add-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .selected-players {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .player-tag {
+      background: rgba(91,107,255,0.2);
+      border: 1px solid rgba(91,107,255,0.5);
+      border-radius: 20px;
+      padding: 6px 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .player-tag .remove {
+      cursor: pointer;
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+    .compare-btn {
+      background: var(--good);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .compare-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .chart-container {
+      background: var(--panel);
+      border-radius: var(--r);
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .chart-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .chart-controls select {
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 8px;
+      color: var(--text);
+    }
+    .info-msg {
+      color: var(--muted);
+      font-style: italic;
+      padding: 20px;
+      text-align: center;
+    }
+  </style>
+
+  <div class="selector-card">
+    <h3>Select Players to Compare</h3>
+    <div class="player-select-row">
+      <select id="playerSelect">
+        <option value="">-- Choose a player --</option>
+      </select>
+      <button class="add-btn" id="addPlayerBtn"><i class="fas fa-plus"></i> Add</button>
+    </div>
+    <div class="selected-players" id="selectedPlayersContainer"></div>
+
+    <div class="chart-controls">
+      <label for="chartType">Comparison Type:</label>
+      <select id="chartType">
+        <option value="normalized">Normalized (start = 100)</option>
+        <option value="percent">Percentage Growth</option>
+      </select>
+    </div>
+
+    <button class="compare-btn" id="compareBtn" disabled>Compare Selected Players</button>
+  </div>
+
+  <div class="chart-container">
+    <canvas id="compareChart"></canvas>
+  </div>
+
+  <script>
+    (async function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guildId = urlParams.get('guild');
+      if (!guildId) return;
+
+      // Load all players (current might) for the dropdown
+      const players = await apiFetch(`/api/guilds/${guildId}/might/current`);
+      const playerSelect = document.getElementById('playerSelect');
+      players.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.user_id;
+        opt.textContent = `${p.username} (${parseFloat(p.might).toLocaleString()})`;
+        playerSelect.appendChild(opt);
+      });
+
+      const selectedIds = new Set(); // store user_ids
+      const selectedContainer = document.getElementById('selectedPlayersContainer');
+      const addBtn = document.getElementById('addPlayerBtn');
+      const compareBtn = document.getElementById('compareBtn');
+      const chartTypeSelect = document.getElementById('chartType');
+      let compareChart = null;
+
+      // Enable compare button only when at least 2 players are selected
+      function updateCompareButton() {
+        compareBtn.disabled = selectedIds.size < 2;
+      }
+
+      function renderSelectedTags() {
+        selectedContainer.innerHTML = '';
+        selectedIds.forEach(id => {
+          const player = players.find(p => p.user_id === id);
+          if (!player) return;
+          const tag = document.createElement('span');
+          tag.className = 'player-tag';
+          tag.innerHTML = `${player.username} <span class="remove" data-id="${id}">✕</span>`;
+          selectedContainer.appendChild(tag);
+        });
+        // Attach remove events
+        document.querySelectorAll('.remove').forEach(span => {
+          span.addEventListener('click', () => {
+            selectedIds.delete(span.dataset.id);
+            renderSelectedTags();
+            updateCompareButton();
+          });
+        });
+        updateCompareButton();
+      }
+
+      addBtn.addEventListener('click', () => {
+        const selectedId = playerSelect.value;
+        if (!selectedId) {
+          showNotification('Please select a player', 3000);
+          return;
+        }
+        if (selectedIds.has(selectedId)) {
+          showNotification('Player already added', 3000);
+          return;
+        }
+        selectedIds.add(selectedId);
+        renderSelectedTags();
+        playerSelect.value = '';
+      });
+
+      compareBtn.addEventListener('click', async () => {
+        if (selectedIds.size < 2) return;
+
+        compareBtn.disabled = true;
+        compareBtn.textContent = 'Loading...';
+
+        try {
+          const userIds = Array.from(selectedIds);
+          // Fetch history for all selected players
+          const rawData = await apiFetch('/api/might/compare', {
+            method: 'POST',
+            body: JSON.stringify({ guildId, userIds })
+          });
+
+          // Process each player's history
+          const datasets = [];
+          const chartType = chartTypeSelect.value;
+
+          Object.entries(rawData).forEach(([userId, history]) => {
+            const player = players.find(p => p.user_id === userId);
+            if (!history || history.length === 0) return;
+
+            // Sort by date (ascending)
+            const sorted = [...history].sort((a, b) => a.recorded_at - b.recorded_at);
+            const mightValues = sorted.map(h => h.might);
+
+            let dataPoints = [];
+
+            if (chartType === 'normalized') {
+              // Normalized to 100 (first value = 100)
+              const base = mightValues[0];
+              dataPoints = mightValues.map(val => (val / base) * 100);
+            } else {
+              // Percentage growth between consecutive points
+              // We'll plot the growth at each point after the first
+              // To keep same x-axis length, we can set first point to 0 and then cumulative growth? Better: show each growth step as a point.
+              // For simplicity, we'll show the growth percentage at each step (starting from second point).
+              // We'll create an array of growth values aligned with indices 1..n-1.
+              const growth = [];
+              for (let i = 1; i < mightValues.length; i++) {
+                const prev = mightValues[i - 1];
+                const curr = mightValues[i];
+                const percent = ((curr - prev) / prev) * 100;
+                growth.push(percent);
+              }
+              dataPoints = growth;
+            }
+
+            // For percent growth, the x-axis labels are the indices of the growth steps.
+            // We'll use a numeric x-axis and label them as "Step 1", "Step 2", etc.
+            datasets.push({
+              label: player ? player.username : userId,
+              data: dataPoints,
+              borderColor: '#' + Math.floor(Math.random()*16777215).toString(16),
+              fill: false,
+              tension: 0.1,
+              pointRadius: 3
+            });
+          });
+
+          // Prepare chart labels
+          let labels = [];
+          if (chartType === 'normalized') {
+            // Use the dates as labels (first dataset's length)
+            const firstHistory = rawData[userIds[0]];
+            if (firstHistory) {
+              labels = firstHistory.map(h => new Date(h.recorded_at).toLocaleDateString());
+            }
+          } else {
+            // For percent growth, the number of points is length-1 of the first player's history
+            const firstHistory = rawData[userIds[0]];
+            if (firstHistory) {
+              const stepCount = firstHistory.length - 1;
+              labels = Array.from({ length: stepCount }, (_, i) => `Step ${i+1}`);
+            }
+          }
+
+          const ctx = document.getElementById('compareChart').getContext('2d');
+
+          // Destroy previous chart
+          if (compareChart) {
+            compareChart.destroy();
+          }
+
+          // Create new chart
+          compareChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: datasets
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      let label = context.dataset.label || '';
+                      if (label) label += ': ';
+                      if (context.parsed.y !== null) {
+                        if (chartType === 'normalized') {
+                          label += context.parsed.y.toFixed(1) + '% of base';
+                        } else {
+                          label += context.parsed.y.toFixed(2) + '%';
+                        }
+                      }
+                      return label;
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: chartType === 'percent' ? true : false,
+                  title: {
+                    display: true,
+                    text: chartType === 'normalized' ? 'Normalized Value (base 100)' : 'Percentage Growth (%)'
+                  }
+                }
+              }
+            }
+          });
+
+        } catch (err) {
+          showNotification('Comparison failed: ' + err.message, 4000);
+        } finally {
+          compareBtn.disabled = false;
+          compareBtn.textContent = 'Compare Selected Players';
+        }
+      });
+
+      // Initialise button state
+      updateCompareButton();
+    })();
+  </script>
+</div>

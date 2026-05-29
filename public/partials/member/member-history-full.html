@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Complete Might History – Warboard</title>
+  <link rel="icon" href="/favicon.ico">
+  <script src="/favicon.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root{
+      --bg0:#071027;
+      --bg1:#0b1736;
+      --panel: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.10);
+      --text:#e7eefc;
+      --muted:#9aa8c7;
+      --accent:#5b6bff;
+      --accent2:#7c5cff;
+      --shadow: 0 16px 40px rgba(0,0,0,.45);
+      --r: 16px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+    body{
+      min-height:100vh;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 20% 10%, rgba(124,92,255,.25), transparent 60%),
+        radial-gradient(900px 500px at 85% 35%, rgba(91,107,255,.20), transparent 60%),
+        radial-gradient(1100px 700px at 60% 100%, rgba(34,197,94,.12), transparent 65%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      padding:20px;
+    }
+    .container{
+      max-width:1200px;
+      margin:0 auto;
+      background:rgba(15,23,42,.9);
+      border-radius:var(--r);
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:var(--shadow);
+      padding:24px;
+    }
+    h1{
+      margin-bottom:20px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .back-link{
+      margin-left:auto;
+      color:var(--accent);
+      text-decoration:none;
+      font-size:0.9rem;
+    }
+    .back-link:hover{text-decoration:underline;}
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-bottom:20px;
+    }
+    th,td{
+      padding:12px;
+      text-align:left;
+      border-bottom:1px solid rgba(255,255,255,.1);
+    }
+    th{
+      color:var(--muted);
+      font-weight:500;
+    }
+    .pagination{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      align-items:center;
+    }
+    .pagination button{
+      background:rgba(255,255,255,.1);
+      border:1px solid var(--stroke);
+      border-radius:8px;
+      padding:8px 16px;
+      color:var(--text);
+      cursor:pointer;
+      transition:background .2s;
+    }
+    .pagination button:hover:not(:disabled){
+      background:rgba(255,255,255,.2);
+    }
+    .pagination button:disabled{
+      opacity:0.3;
+      cursor:not-allowed;
+    }
+    .pagination span{
+      color:var(--muted);
+    }
+    .delete-btn{
+      background:none;
+      border:none;
+      color:#ff6b6b;
+      cursor:pointer;
+      font-size:1.1rem;
+    }
+    .delete-btn:hover{color:#ff4444;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <i class="fas fa-chart-line"></i> Complete Might History
+      <a href="#" class="back-link" onclick="window.close()">Close</a>
+    </h1>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Might</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="3" class="info-msg">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button id="prevBtn" disabled>Previous</button>
+      <span id="pageInfo">Page 1</span>
+      <button id="nextBtn" disabled>Next</button>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(path, { ...options, credentials: 'include', headers: { 'Content-Type': 'application/json', ...options.headers } });
+      if (res.status === 401) { window.location.href = '/login.html'; return null; }
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const guildId = urlParams.get('guild');
+    const userId = urlParams.get('userId');
+    if (!guildId || !userId) { alert('Missing parameters'); window.close(); }
+
+    const limit = 20;
+    let offset = 0;
+    let total = 0;
+
+    async function loadHistory() {
+      try {
+        const data = await apiFetch(`/api/guilds/${guildId}/might/history-full/${userId}?limit=${limit}&offset=${offset}`);
+        const history = data.history || [];
+        total = data.total || 0;
+        renderTable(history);
+        updatePagination();
+      } catch (err) {
+        document.getElementById('historyBody').innerHTML = `<tr><td colspan="3" class="error-msg">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    function renderTable(history) {
+      const tbody = document.getElementById('historyBody');
+      if (history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="info-msg">No history found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = history.map(h => {
+        const date = new Date(h.recorded_at).toLocaleString();
+        return `<tr>
+          <td>${date}</td>
+          <td>${parseFloat(h.might).toLocaleString()}</td>
+          <td><button class="delete-btn" data-id="${h.id}" title="Delete"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+      }).join('');
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = btn.dataset.id;
+          if (!confirm('Delete this entry?')) return;
+          try {
+            await apiFetch(`/api/might/history/${id}`, { method: 'DELETE' });
+            loadHistory(); // refresh
+          } catch (err) {
+            alert('Delete failed: ' + err.message);
+          }
+        });
+      });
+    }
+
+    function updatePagination() {
+      const page = Math.floor(offset / limit) + 1;
+      const totalPages = Math.ceil(total / limit);
+      document.getElementById('pageInfo').textContent = `Page ${page} of ${totalPages}`;
+      document.getElementById('prevBtn').disabled = offset === 0;
+      document.getElementById('nextBtn').disabled = offset + limit >= total;
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (offset > 0) {
+        offset -= limit;
+        loadHistory();
+      }
+    });
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (offset + limit < total) {
+        offset += limit;
+        loadHistory();
+      }
+    });
+
+    // Listen for updates to refresh if needed
+    socket.on('submissionUpdated', (data) => {
+      if (data.guildId === guildId) loadHistory();
+    });
+
+    loadHistory();
+  </script>
+</body>
+</html>

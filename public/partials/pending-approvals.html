@@ -1,0 +1,162 @@
+<div class="pending-approvals-panel">
+  <style>
+    .pending-approvals-panel { max-width: 1200px; margin:0 auto; }
+    .filters { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
+    .filters select, .filters input { background: rgba(0,0,0,.3); border:1px solid var(--stroke); border-radius:8px; padding:8px 12px; color:var(--text); }
+    .table-container { background: var(--panel); border-radius: var(--r); padding:20px; overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:12px; text-align:left; border-bottom:1px solid rgba(255,255,255,.1); }
+    th { color:var(--muted); font-weight:500; }
+    .btn-small { padding:4px 8px; font-size:0.75rem; border-radius:4px; border:none; cursor:pointer; }
+    .btn-approve { background: var(--good); color:white; }
+    .btn-reject { background: #dc3545; color:white; }
+    .reason-input { width:200px; padding:4px; background:rgba(0,0,0,.3); border:1px solid var(--stroke); color:var(--text); border-radius:4px; }
+    .loading { text-align:center; padding:40px; color:var(--muted); }
+  </style>
+
+  <h2 data-i18n="pending_approvals.title"><i class="fas fa-clock"></i> Pending Might Submissions</h2>
+  <div class="filters">
+    <input type="text" id="searchInput" data-i18n-placeholder="pending_approvals.search_placeholder" placeholder="Search user..." style="flex:1;">
+    <select id="filterSelect">
+      <option value="all" data-i18n="pending_approvals.filter_all">All</option>
+      <option value="pending" data-i18n="pending_approvals.filter_pending">Pending</option>
+    </select>
+    <button class="btn btn-primary glow-btn" id="refreshBtn" data-i18n="pending_approvals.refresh">Refresh</button>
+  </div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th data-i18n="pending_approvals.user">User</th>
+          <th data-i18n="pending_approvals.ingame_name">In‑Game Name</th>
+          <th data-i18n="pending_approvals.might">Might</th>
+          <th data-i18n="pending_approvals.submitted">Submitted</th>
+          <th data-i18n="pending_approvals.reason">Reason</th>
+          <th data-i18n="pending_approvals.actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="pendingBody">
+        <tr><td colspan="6" class="loading" data-i18n="common.loading">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    (async function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guildId = urlParams.get('guild');
+      if (!guildId) { alert('No guild'); return; }
+
+      const pendingBody = document.getElementById('pendingBody');
+      const searchInput = document.getElementById('searchInput');
+      const filterSelect = document.getElementById('filterSelect');
+      const refreshBtn = document.getElementById('refreshBtn');
+
+      let pendingData = [];
+
+      const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+
+      async function loadPending() {
+        pendingBody.innerHTML = `<tr><td colspan="6" class="loading" data-i18n="common.loading">${t('common.loading', 'Loading...')}</td></tr>`;
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+        try {
+          pendingData = await apiFetch(`/api/might/pending?guildId=${guildId}`);
+          renderTable();
+          const badge = document.getElementById('pendingCount');
+          if (badge) badge.textContent = pendingData.length;
+        } catch (err) {
+          pendingBody.innerHTML = `<tr><td colspan="6" class="error-msg">${t('common.error', 'Error:')} ${err.message}</td></tr>`;
+        }
+      }
+
+      function renderTable() {
+        const filter = filterSelect.value;
+        const search = searchInput.value.toLowerCase();
+        let filtered = pendingData;
+        if (filter === 'pending') {
+          filtered = filtered.filter(p => p.status === 'pending');
+        }
+        if (search) {
+          filtered = filtered.filter(p => 
+            (p.username && p.username.toLowerCase().includes(search)) ||
+            (p.in_game_name && p.in_game_name.toLowerCase().includes(search))
+          );
+        }
+
+        if (filtered.length === 0) {
+          pendingBody.innerHTML = `<tr><td colspan="6" class="info-msg" data-i18n="pending_approvals.no_pending">${t('pending_approvals.no_pending', 'No pending submissions.')}</td></tr>`;
+          if (typeof window.applyTranslations === 'function') window.applyTranslations();
+          return;
+        }
+
+        pendingBody.innerHTML = '';
+        filtered.forEach(p => {
+          const tr = document.createElement('tr');
+          const date = new Date(p.submitted_at).toLocaleString();
+          tr.innerHTML = `
+            <td>${p.username} (${p.user_id})</td>
+            <td>${p.in_game_name}</td>
+            <td>${parseFloat(p.submitted_might).toLocaleString()}</td>
+            <td>${date}</td>
+            <td><input type="text" class="reason-input" id="reason-${p.id}" data-i18n-placeholder="pending_approvals.reason_placeholder" placeholder="${t('pending_approvals.reason_placeholder', 'Optional reason')}"></td>
+            <td>
+              <button class="btn-small btn-approve glow-btn" data-id="${p.id}" data-i18n="pending_approvals.approve">${t('pending_approvals.approve', 'Approve')}</button>
+              <button class="btn-small btn-reject glow-btn" data-id="${p.id}" data-i18n="pending_approvals.reject">${t('pending_approvals.reject', 'Reject')}</button>
+            </td>
+          `;
+          pendingBody.appendChild(tr);
+        });
+
+        // Attach event listeners
+        document.querySelectorAll('.btn-approve').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            const reason = document.getElementById(`reason-${id}`).value.trim();
+            await handleAction(id, 'approve', reason);
+          });
+        });
+        document.querySelectorAll('.btn-reject').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            const reason = document.getElementById(`reason-${id}`).value.trim();
+            if (!reason) {
+              showNotification(t('pending_approvals.reason_required', 'Please provide a reason for rejection'), 3000);
+              return;
+            }
+            await handleAction(id, 'reject', reason);
+          });
+        });
+      }
+
+      async function handleAction(id, action, reason) {
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = t('common.processing', 'Processing...');
+        try {
+          await apiFetch(`/api/might/${action}/${id}`, {
+            method: 'POST',
+            body: JSON.stringify({ notes: reason })
+          });
+          showNotification(`${t('pending_approvals.submission_actioned', 'Submission')} ${action}${t('pending_approvals.action_success', 'ed successfully!')}`, 3000);
+          loadPending();
+        } catch (err) {
+          showNotification(`${t('common.error', 'Failed:')} ${err.message}`, 4000);
+          btn.disabled = false;
+          btn.textContent = action === 'approve' ? t('pending_approvals.approve', 'Approve') : t('pending_approvals.reject', 'Reject');
+        }
+      }
+
+      socket.on('submissionUpdated', (data) => {
+        if (data.guildId === guildId) {
+          loadPending();
+        }
+      });
+
+      searchInput.addEventListener('input', renderTable);
+      filterSelect.addEventListener('change', renderTable);
+      refreshBtn.addEventListener('click', loadPending);
+
+      await loadPending();
+    })();
+  </script>
+</div>

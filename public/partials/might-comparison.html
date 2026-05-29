@@ -1,0 +1,60 @@
+<div class="compare-panel">
+    <h2>Compare Players</h2>
+    <div>
+      <label>Select players:</label>
+      <select id="playerSelect" multiple size="5"></select>
+      <button id="compareBtn">Compare</button>
+    </div>
+    <canvas id="compareChart" width="600" height="300"></canvas>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    (async function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guildId = urlParams.get('guild');
+      if (!guildId) return;
+  
+      // Load all players (current might)
+      const players = await apiFetch(`/api/guilds/${guildId}/might/current`);
+      const select = document.getElementById('playerSelect');
+      players.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.user_id;
+        opt.textContent = `${p.username} (${p.might})`;
+        select.appendChild(opt);
+      });
+  
+      document.getElementById('compareBtn').addEventListener('click', async () => {
+        const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+        if (selected.length < 2) { alert('Select at least 2 players'); return; }
+        const data = await apiFetch('/api/might/compare', {
+          method: 'POST',
+          body: JSON.stringify({ guildId, userIds: selected })
+        });
+        // Prepare chart datasets
+        const datasets = [];
+        const allLabels = new Set();
+        Object.entries(data).forEach(([userId, history]) => {
+          const player = players.find(p => p.user_id === userId);
+          const points = history.map(h => ({ x: new Date(h.recorded_at), y: h.might }));
+          datasets.push({
+            label: player ? player.username : userId,
+            data: points,
+            borderColor: '#' + Math.floor(Math.random()*16777215).toString(16),
+            fill: false,
+            tension: 0.1
+          });
+          history.forEach(h => allLabels.add(new Date(h.recorded_at).toLocaleDateString()));
+        });
+        const ctx = document.getElementById('compareChart').getContext('2d');
+        if (window.compareChart) window.compareChart.destroy();
+        window.compareChart = new Chart(ctx, {
+          type: 'line',
+          data: { datasets },
+          options: {
+            scales: { x: { type: 'time', time: { unit: 'day' } } }
+          }
+        });
+      });
+    })();
+  </script>

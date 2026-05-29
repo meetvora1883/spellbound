@@ -1,0 +1,111 @@
+<style>
+  .live-user-list { list-style: none; padding: 0; margin: 0; }
+  .live-user-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-bottom: 1px solid var(--stroke);
+    animation: fadeIn 0.3s ease;
+  }
+  .live-user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #333; background-size: cover; background-position: center;
+    flex-shrink: 0;
+  }
+  .live-user-info { flex: 1; }
+  .live-user-name { font-weight: 600; }
+  .live-user-ip { font-size: 0.8rem; color: var(--muted); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+</style>
+
+<section class="panel">
+  <div class="panel-head">
+    <span>🟢 Live Online Web Users</span>
+  </div>
+  <div class="panel-body" style="position: relative; min-height: 60px;">
+    <ul class="live-user-list" id="liveUserList"></ul>
+    <div id="noUsersMessage" style="text-align:center; color:var(--muted); padding:20px;">
+      Nobody is online right now.
+    </div>
+  </div>
+</section>
+
+<script>
+  (function() {
+    const list = document.getElementById('liveUserList');
+    const noUsersDiv = document.getElementById('noUsersMessage');
+
+    // Fetch current active sessions on page load
+    async function loadCurrentSessions() {
+      try {
+        const sessions = await apiFetch('/api/admin/sessions');
+        list.innerHTML = '';
+        sessions.forEach(s => addUserToList(s));
+        updateNoUsersMessage();
+      } catch(e) { console.error(e); }
+    }
+
+    function addUserToList(session) {
+      const userId = session.userId;
+      const data = session.data;
+      const avatarHash = data.avatar;  // Discord avatar hash
+      let avatarUrl = '';
+      if (userId && avatarHash) {
+        // Construct Discord CDN URL (PNG, 64x64 is fine for a small icon)
+        avatarUrl = `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.png?size=64`;
+      }
+
+      const li = document.createElement('li');
+      li.className = 'live-user-item';
+      li.setAttribute('data-session-id', session.sessionId);
+      li.innerHTML = `
+        <div class="live-user-avatar" style="background-image: url('${avatarUrl}')"></div>
+        <div class="live-user-info">
+          <div class="live-user-name">${data.username || userId}</div>
+          <div class="live-user-ip">${data.ip || '?'}</div>
+        </div>
+      `;
+      list.appendChild(li);
+    }
+
+    function removeUserBySessionId(sessionId) {
+      const li = list.querySelector(`[data-session-id="${sessionId}"]`);
+      if (li) {
+        li.style.animation = 'fadeOut 0.2s ease forwards';
+        li.addEventListener('animationend', () => li.remove());
+        updateNoUsersMessage();
+      }
+    }
+
+    function updateNoUsersMessage() {
+      noUsersDiv.style.display = list.children.length === 0 ? 'block' : 'none';
+    }
+
+    // Socket events
+    socket.on('webUserOnline', (userData) => {
+      // Build a session-like object for the list
+      addUserToList({
+        sessionId: userData.sessionId,
+        userId: userData.id,
+        data: {
+          avatar: userData.avatar,
+          username: userData.username,
+          ip: userData.ip
+        }
+      });
+      updateNoUsersMessage();
+    });
+
+    socket.on('webUserOffline', (data) => {
+      removeUserBySessionId(data.sessionId);
+    });
+
+    // Initial load
+    loadCurrentSessions();
+  })();
+</script>

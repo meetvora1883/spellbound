@@ -1,0 +1,920 @@
+<!-- warboard-assign.html -->
+<div class="warboard-assign-panel">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    .warboard-assign-panel {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .assign-header {
+      display: flex;
+      gap: 20px;
+      align-items: flex-end;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .date-selector {
+      flex: 1;
+      min-width: 250px;
+    }
+    .date-selector label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .date-selector select,
+    .date-selector input {
+      width: 100%;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .date-selector select:focus,
+    .date-selector input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(91,107,255,0.3);
+    }
+    .btn-refresh {
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    .btn-refresh:hover {
+      background: rgba(255,255,255,.15);
+    }
+
+    /* Assignment form */
+    .assign-form-card {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 18px 20px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .form-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      align-items: end;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .form-group input,
+    .form-group select {
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(91,107,255,0.3);
+    }
+    .form-group.error input,
+    .form-group.error select,
+    .form-group.error .user-search-input {
+      border-color: #ff6b6b;
+      box-shadow: 0 0 0 2px rgba(255,107,107,0.3);
+    }
+    .error-message {
+      color: #ff6b6b;
+      font-size: 0.8rem;
+      margin-top: 4px;
+      display: none;
+    }
+    .error-message.show {
+      display: block;
+    }
+    .player-type-toggle {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .player-type-toggle label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .player-type-toggle input[type="radio"] {
+      accent-color: var(--accent);
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Search dropdown */
+    .user-search-container {
+      width: 100%;
+    }
+    .user-search-input {
+      width: 100%;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--stroke);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .user-search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(91,107,255,0.3);
+    }
+    .user-dropdown {
+      position: fixed;
+      max-height: 250px;
+      overflow-y: auto;
+      background: rgba(15,23,42,0.98);
+      border: 1px solid rgba(148,163,184,0.45);
+      border-radius: 8px;
+      margin-top: 4px;
+      z-index: 10000;
+      display: none;
+      box-shadow: var(--shadow);
+      box-sizing: border-box;
+    }
+    .user-dropdown.show {
+      display: block;
+    }
+    .user-dropdown-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      color: var(--text);
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+    .user-dropdown-item:hover {
+      background: rgba(91,107,255,0.2);
+    }
+    .user-dropdown-item:last-child {
+      border-bottom: none;
+    }
+    .dropdown-nickname {
+      font-weight: bold;
+      color: #fff;
+    }
+    .dropdown-username {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* Bases grid */
+    .bases-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .base-card {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 16px;
+    }
+    .base-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .base-name {
+      font-size: 1.1rem;
+    }
+    .base-capacity {
+      font-size: 0.85rem;
+      color: var(--muted);
+      background: rgba(255,255,255,.08);
+      padding: 4px 8px;
+      border-radius: 20px;
+    }
+    .player-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .player-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+    .player-item:last-child {
+      border-bottom: none;
+    }
+    .player-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .player-name {
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+    .player-might {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .player-actions button {
+      background: none;
+      border: none;
+      color: #ff6b6b;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px;
+    }
+    .player-actions button:hover {
+      color: #ff4444;
+    }
+    .empty-base {
+      color: var(--muted);
+      font-style: italic;
+      text-align: center;
+      padding: 16px 0;
+    }
+    .loading-members {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+    }
+
+    /* Live Preview */
+    .preview-section {
+      margin-top: 30px;
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 18px 20px;
+    }
+    .preview-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .preview-content {
+      background: rgba(0,0,0,.3);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      color: #dcddde;
+      border-left: 4px solid var(--accent);
+      max-height: 400px;
+      overflow-y: auto;
+    }
+  </style>
+
+  <div class="warboard-assign-panel">
+    <!-- Date selector and refresh -->
+    <div class="assign-header">
+      <div class="date-selector" id="dateSelectorGroup">
+        <label data-i18n="warboard_assign.war_date">📅 War Date</label>
+        <select id="warDateSelect">
+          <option value="" data-i18n="warboard_assign.select_date">-- Select a date --</option>
+        </select>
+        <div id="dateError" class="error-message" data-i18n="warboard_assign.please_select_date">Please select a date</div>
+      </div>
+      <button class="btn-refresh glow-btn" id="refreshBtn" data-i18n="warboard_assign.refresh"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+
+    <!-- Assignment form -->
+    <div class="assign-form-card">
+      <div class="form-title" data-i18n="warboard_assign.new_assignment"><i class="fas fa-user-plus"></i> New Assignment</div>
+
+      <div class="player-type-toggle">
+        <label>
+          <input type="radio" name="playerType" value="discord" checked> <span data-i18n="warboard_assign.discord_user">Discord User</span>
+        </label>
+        <label>
+          <input type="radio" name="playerType" value="name"> <span data-i18n="warboard_assign.ingame_name">In‑game Name</span>
+        </label>
+      </div>
+
+      <div id="discordUserSection">
+        <div class="form-group" id="userSearchGroup">
+          <label data-i18n="warboard_assign.search_member">Search Server Member</label>
+          <div class="user-search-container">
+            <input type="text" id="userSearch" class="user-search-input" data-i18n-placeholder="warboard_assign.type_username" placeholder="Type username..." autocomplete="off">
+            <div id="userDropdown" class="user-dropdown"></div>
+          </div>
+          <div id="userSearchError" class="error-message" data-i18n="warboard_assign.please_select_user">Please select a Discord user</div>
+        </div>
+        <input type="hidden" id="selectedUserId" value="">
+        <div id="selectedUserDisplay" style="font-size:0.9rem; color:var(--muted); margin-top:4px;"></div>
+      </div>
+
+      <div id="nameSection" style="display:none;">
+        <div class="form-group" id="ingameNameGroup">
+          <label data-i18n="warboard_assign.ingame_name_label">In‑game Name</label>
+          <input type="text" id="ingameName" data-i18n-placeholder="warboard_assign.enter_name" placeholder="Enter name...">
+          <div id="ingameNameError" class="error-message" data-i18n="warboard_assign.please_enter_name">Please enter an in‑game name</div>
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-top:16px;">
+        <div class="form-group" id="baseGroup">
+          <label data-i18n="warboard_assign.base">Base</label>
+          <select id="baseSelect">
+            <option value="" data-i18n="warboard_assign.select_base">-- Select base --</option>
+          </select>
+          <div id="baseError" class="error-message" data-i18n="warboard_assign.please_select_base">Please select a base</div>
+        </div>
+        <div class="form-group" id="mightGroup">
+          <label data-i18n="warboard_assign.might">Might</label>
+          <input type="number" step="0.001" id="mightInput" data-i18n-placeholder="warboard_assign.might_placeholder" placeholder="e.g. 1200.5">
+          <div id="mightError" class="error-message" data-i18n="warboard_assign.please_enter_might">Please enter might</div>
+        </div>
+        <div class="form-group">
+          <label style="opacity:0;"> </label>
+          <button class="btn btn-primary glow-btn" id="assignBtn" data-i18n="warboard_assign.assign">Assign</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current assignments -->
+    <div id="assignmentsContainer">
+      <h3 style="margin: 20px 0 10px;" data-i18n="warboard_assign.current_assignments">Current Assignments</h3>
+      <div class="bases-grid" id="basesGrid"></div>
+    </div>
+
+    <!-- Live Preview -->
+    <div class="preview-section">
+      <div class="preview-title" data-i18n="warboard_assign.live_preview"><i class="fas fa-eye"></i> Live Warboard Preview</div>
+      <div id="livePreview" class="preview-content" data-i18n="warboard_assign.select_date_to_preview">Select a date to preview the warboard.</div>
+    </div>
+  </div>
+
+  <script>
+    (async function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guildId = urlParams.get('guild');
+      if (!guildId) {
+        alert('No guild selected');
+        return;
+      }
+
+      // Base names and capacities
+      const BASES = [
+        { name: 'MAINGATE', capacity: 6 },
+        { name: 'CITADELLE', capacity: 9 },
+        { name: 'EASTBRIDGE', capacity: 3 },
+        { name: 'CENTRALBRIDGE', capacity: 3 },
+        { name: 'WESTBRIDGE', capacity: 3 },
+        { name: 'TOWER OF ELEMENTS', capacity: 3 },
+        { name: 'TOWER OF FORESIGHT', capacity: 3 },
+        { name: 'SCRIPTORIUM', capacity: 3 },
+        { name: 'LABORATORY', capacity: 3 },
+        { name: 'DOCks', capacity: 2 },
+        { name: 'BOATHOUSE', capacity: 2 }
+      ];
+
+      // DOM elements
+      const dateSelect = document.getElementById('warDateSelect');
+      const refreshBtn = document.getElementById('refreshBtn');
+      const baseSelect = document.getElementById('baseSelect');
+      const assignBtn = document.getElementById('assignBtn');
+      const mightInput = document.getElementById('mightInput');
+      const discordUserSection = document.getElementById('discordUserSection');
+      const nameSection = document.getElementById('nameSection');
+      const userSearch = document.getElementById('userSearch');
+      const userDropdown = document.getElementById('userDropdown');
+      const selectedUserId = document.getElementById('selectedUserId');
+      const selectedUserDisplay = document.getElementById('selectedUserDisplay');
+      const ingameName = document.getElementById('ingameName');
+      const playerTypeRadios = document.querySelectorAll('input[name="playerType"]');
+      const basesGrid = document.getElementById('basesGrid');
+      const livePreview = document.getElementById('livePreview');
+
+      // Validation groups
+      const dateGroup = document.getElementById('dateSelectorGroup');
+      const userSearchGroup = document.getElementById('userSearchGroup');
+      const ingameNameGroup = document.getElementById('ingameNameGroup');
+      const baseGroup = document.getElementById('baseGroup');
+      const mightGroup = document.getElementById('mightGroup');
+
+      const dateError = document.getElementById('dateError');
+      const userSearchError = document.getElementById('userSearchError');
+      const ingameNameError = document.getElementById('ingameNameError');
+      const baseError = document.getElementById('baseError');
+      const mightError = document.getElementById('mightError');
+
+      let members = [];
+      let assignments = [];
+      let currentDate = null;
+
+      // Populate base dropdown
+      BASES.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.name;
+        opt.textContent = b.name;
+        baseSelect.appendChild(opt);
+      });
+
+      // Toggle player type
+      playerTypeRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+          if (radio.value === 'discord' && radio.checked) {
+            discordUserSection.style.display = 'block';
+            nameSection.style.display = 'none';
+            ingameNameGroup.classList.remove('error');
+            ingameNameError.classList.remove('show');
+          } else if (radio.value === 'name' && radio.checked) {
+            discordUserSection.style.display = 'none';
+            nameSection.style.display = 'block';
+            userSearchGroup.classList.remove('error');
+            userSearchError.classList.remove('show');
+          }
+        });
+      });
+
+      // Clear validation on input/change
+      dateSelect.addEventListener('change', () => {
+        dateGroup.classList.remove('error');
+        dateError.classList.remove('show');
+      });
+      userSearch.addEventListener('input', () => {
+        userSearchGroup.classList.remove('error');
+        userSearchError.classList.remove('show');
+      });
+      ingameName.addEventListener('input', () => {
+        ingameNameGroup.classList.remove('error');
+        ingameNameError.classList.remove('show');
+      });
+      baseSelect.addEventListener('change', () => {
+        baseGroup.classList.remove('error');
+        baseError.classList.remove('show');
+      });
+      mightInput.addEventListener('input', () => {
+        mightGroup.classList.remove('error');
+        mightError.classList.remove('show');
+      });
+
+      // Load all server members
+      async function loadAllMembers() {
+        members = [];
+        let after = null;
+        let hasMore = true;
+
+        userSearch.placeholder = window.t('common.loading', 'Loading members...');
+        userSearch.disabled = true;
+
+        try {
+          while (hasMore) {
+            let url = `/api/guilds/${guildId}/members?limit=100`;
+            if (after) url += `&after=${after}`;
+            const res = await fetch(url, { credentials: 'include' });
+            if (res.status === 429) {
+              const data = await res.json();
+              const retryAfter = data.retryAfter || 30;
+              await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+              continue;
+            }
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const newMembers = data.members;
+            members = members.concat(newMembers.map(m => ({
+              id: m.id,
+              username: m.username,
+              nickname: m.nickname || m.username
+            })));
+            after = data.next;
+            hasMore = data.hasMore;
+          }
+        } catch (err) {
+          if (typeof showNotification === 'function') {
+            showNotification('Error loading members: ' + err.message, 4000);
+          }
+        } finally {
+          userSearch.placeholder = window.t('warboard_assign.type_username', 'Type username...');
+          userSearch.disabled = false;
+        }
+      }
+
+      // Load war dates
+      async function loadDates() {
+        try {
+          const dates = await apiFetch(`/api/warboards?guildId=${guildId}`);
+          dateSelect.innerHTML = `<option value="">${window.t('warboard_assign.select_date', '-- Select a date --')}</option>`;
+          if (dates && dates.length) {
+            dates.forEach(w => {
+              const opt = document.createElement('option');
+              opt.value = w.war_date;
+              opt.textContent = w.war_date;
+              dateSelect.appendChild(opt);
+            });
+          }
+        } catch (err) {
+          if (typeof showNotification === 'function') {
+            showNotification('Failed to load dates: ' + err.message, 4000);
+          }
+        }
+      }
+
+      // Load assignments
+      async function loadAssignments(date) {
+        if (!date) {
+          basesGrid.innerHTML = `<div class="empty-base" style="grid-column:1/-1;" data-i18n="warboard_assign.select_date_to_preview">${window.t('warboard_assign.select_date_to_preview', 'Select a date to view assignments')}</div>`;
+          livePreview.innerHTML = `<span data-i18n="warboard_assign.select_date_to_preview">${window.t('warboard_assign.select_date_to_preview', 'Select a date to preview the warboard.')}</span>`;
+          if (typeof window.applyTranslations === 'function') window.applyTranslations();
+          return;
+        }
+        try {
+          assignments = await apiFetch(`/api/warboards/${date}?guildId=${guildId}`) || [];
+          renderAssignments();
+          updatePreview();
+          if (typeof window.applyTranslations === 'function') window.applyTranslations();
+        } catch (err) {
+          if (typeof showNotification === 'function') {
+            showNotification('Failed to load assignments: ' + err.message, 4000);
+          }
+        }
+      }
+
+      // Render assignments
+      function renderAssignments() {
+        const baseMap = new Map();
+        BASES.forEach(b => baseMap.set(b.name, []));
+        assignments.forEach(a => {
+          if (baseMap.has(a.base)) baseMap.get(a.base).push(a);
+        });
+
+        let html = '';
+        BASES.forEach(base => {
+          const assigned = baseMap.get(base.name) || [];
+          const count = assigned.length;
+          const capacity = base.capacity;
+
+          html += `<div class="base-card">`;
+          html += `<div class="base-header">`;
+          html += `<span class="base-name">${base.name}</span>`;
+          html += `<span class="base-capacity">${count}/${capacity}</span>`;
+          html += `</div>`;
+
+          if (assigned.length === 0) {
+            html += `<div class="empty-base" data-i18n="warboard_assign.no_players">${window.t('warboard_assign.no_players', 'No players')}</div>`;
+          } else {
+            html += `<ul class="player-list">`;
+            assigned.forEach(a => {
+              const playerName = a.username || (a.user_id ? `<@${a.user_id}>` : 'Unknown');
+              const might = a.might ? parseFloat(a.might).toLocaleString() : '0';
+              html += `<li class="player-item">`;
+              html += `<div class="player-info">`;
+              html += `<span class="player-name">${playerName}</span>`;
+              html += `<span class="player-might">${might} ${window.t('warboard_assign.might_unit', 'might')}</span>`;
+              html += `</div>`;
+              html += `<div class="player-actions">`;
+              html += `<button class="remove-btn" data-assignment-id="${a.id}"><i class="fas fa-trash"></i></button>`;
+              html += `</div>`;
+              html += `</li>`;
+            });
+            html += `</ul>`;
+          }
+          html += `</div>`;
+        });
+        basesGrid.innerHTML = html;
+
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = btn.dataset.assignmentId;
+            if (!currentDate) return;
+            const confirmed = typeof showConfirmModal === 'function'
+              ? await showConfirmModal(window.t('warboard_assign.remove_assignment', 'Remove Assignment'), window.t('warboard_assign.confirm_remove', 'Are you sure you want to remove this assignment?'))
+              : confirm(window.t('warboard_assign.confirm_remove', 'Are you sure?'));
+            if (!confirmed) return;
+            try {
+              await apiFetch(`/api/warboards/${currentDate}/assign/${id}`, {
+                method: 'DELETE',
+                body: JSON.stringify({ guildId })
+              });
+              if (typeof showNotification === 'function') showNotification(window.t('warboard_assign.assignment_removed', 'Assignment removed'));
+              loadAssignments(currentDate);
+            } catch (err) {
+              if (typeof showNotification === 'function') {
+                showNotification(window.t('common.error', 'Failed: ') + err.message, 4000);
+              } else {
+                alert(err.message);
+              }
+            }
+          });
+        });
+      }
+
+      // Build preview message
+      function buildPreviewMessage() {
+        if (!currentDate || assignments.length === 0) {
+          return window.t('warboard_assign.no_assignments_preview', 'No assignments to preview.');
+        }
+
+        const baseMap = new Map();
+        BASES.forEach(b => baseMap.set(b.name, []));
+        assignments.forEach(a => {
+          if (baseMap.has(a.base)) baseMap.get(a.base).push(a);
+        });
+
+        let totalMight = 0;
+        assignments.forEach(a => totalMight += parseFloat(a.might || 0));
+
+        const displayDate = currentDate;
+        let message = `⚔️ ${window.t('warboard_assign.warboard_title', 'WARBOARD')} - ${displayDate}\n\n`;
+
+        BASES.forEach(base => {
+          const assigned = baseMap.get(base.name) || [];
+          const count = assigned.length;
+          const capacity = base.capacity;
+
+          message += `**${base.name}** (${count}/${capacity})\n`;
+
+          if (assigned.length === 0) {
+            message += `*${window.t('warboard_assign.no_players_assigned', 'No players assigned')}*\n`;
+          } else {
+            assigned.forEach(a => {
+              const formattedMight = parseFloat(a.might || 0).toLocaleString();
+              const playerDisplay = a.user_id && a.mention ? `<@${a.user_id}>` : a.username;
+              message += `${playerDisplay} - ${formattedMight} ${window.t('warboard_assign.might_unit', 'Might')}\n`;
+            });
+          }
+          message += '\n';
+        });
+
+        const totalPlayers = assignments.length;
+        const formattedTotalMight = totalMight.toLocaleString();
+        message += `**${window.t('warboard_assign.total', 'TOTAL')}:** ${totalPlayers} ${window.t('warboard_assign.players', 'players')} - ${formattedTotalMight} ${window.t('warboard_assign.might_unit', 'might')}`;
+
+        return message;
+      }
+
+      function updatePreview() {
+        livePreview.textContent = buildPreviewMessage();
+      }
+
+      // User search
+      function filterMembers(query) {
+        if (!query) return members;
+        const lower = query.toLowerCase();
+        return members.filter(m =>
+          (m.nickname && m.nickname.toLowerCase().includes(lower)) ||
+          m.username.toLowerCase().includes(lower)
+        );
+      }
+
+      function renderUserDropdown(query) {
+        const filtered = filterMembers(query);
+        if (filtered.length === 0) {
+          userDropdown.innerHTML = `<div class="user-dropdown-item">${window.t('warboard_assign.no_matches', 'No matches')}</div>`;
+        } else {
+          userDropdown.innerHTML = filtered.map(m => `
+            <div class="user-dropdown-item" data-user-id="${m.id}" data-nickname="${m.nickname}" data-username="${m.username}">
+              <span class="dropdown-nickname">${m.nickname}</span>
+              <span class="dropdown-username">${m.username}</span>
+            </div>
+          `).join('');
+        }
+
+        const rect = userSearch.getBoundingClientRect();
+        userDropdown.style.position = 'fixed';
+        userDropdown.style.top = (rect.bottom + window.scrollY) + 'px';
+        userDropdown.style.left = (rect.left + window.scrollX) + 'px';
+        userDropdown.style.width = rect.width + 'px';
+        userDropdown.classList.add('show');
+      }
+
+      userSearch.addEventListener('input', (e) => {
+        const query = e.target.value;
+        if (query.length === 0) {
+          userDropdown.classList.remove('show');
+          selectedUserId.value = '';
+          selectedUserDisplay.textContent = '';
+          return;
+        }
+        renderUserDropdown(query);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!userSearch.contains(e.target) && !userDropdown.contains(e.target)) {
+          userDropdown.classList.remove('show');
+        }
+      });
+
+      userDropdown.addEventListener('click', (e) => {
+        const item = e.target.closest('.user-dropdown-item');
+        if (!item) return;
+        const userId = item.dataset.userId;
+        const nickname = item.dataset.nickname;
+        const username = item.dataset.username;
+        userSearch.value = nickname;
+        selectedUserId.value = userId;
+        selectedUserDisplay.textContent = `${nickname} (${username})`;
+        userDropdown.classList.remove('show');
+      });
+
+      window.addEventListener('scroll', () => {
+        if (userDropdown.classList.contains('show')) {
+          const rect = userSearch.getBoundingClientRect();
+          userDropdown.style.top = (rect.bottom + window.scrollY) + 'px';
+          userDropdown.style.left = (rect.left + window.scrollX) + 'px';
+        }
+      }, { passive: true });
+
+      window.addEventListener('resize', () => {
+        if (userDropdown.classList.contains('show')) {
+          const rect = userSearch.getBoundingClientRect();
+          userDropdown.style.top = (rect.bottom + window.scrollY) + 'px';
+          userDropdown.style.left = (rect.left + window.scrollX) + 'px';
+          userDropdown.style.width = rect.width + 'px';
+        }
+      });
+
+      function userAlreadyAssigned(userId) {
+        return assignments.some(a => a.user_id === userId);
+      }
+
+      assignBtn.addEventListener('click', async () => {
+        let isValid = true;
+
+        if (!dateSelect.value) {
+          dateGroup.classList.add('error');
+          dateError.classList.add('show');
+          isValid = false;
+        } else {
+          dateGroup.classList.remove('error');
+          dateError.classList.remove('show');
+        }
+
+        if (!baseSelect.value) {
+          baseGroup.classList.add('error');
+          baseError.classList.add('show');
+          isValid = false;
+        } else {
+          baseGroup.classList.remove('error');
+          baseError.classList.remove('show');
+        }
+
+        if (!mightInput.value.trim()) {
+          mightGroup.classList.add('error');
+          mightError.classList.add('show');
+          isValid = false;
+        } else {
+          mightGroup.classList.remove('error');
+          mightError.classList.remove('show');
+        }
+
+        const playerType = document.querySelector('input[name="playerType"]:checked').value;
+
+        if (playerType === 'discord') {
+          if (!selectedUserId.value) {
+            userSearchGroup.classList.add('error');
+            userSearchError.classList.add('show');
+            isValid = false;
+          } else {
+            userSearchGroup.classList.remove('error');
+            userSearchError.classList.remove('show');
+          }
+        } else {
+          if (!ingameName.value.trim()) {
+            ingameNameGroup.classList.add('error');
+            ingameNameError.classList.add('show');
+            isValid = false;
+          } else {
+            ingameNameGroup.classList.remove('error');
+            ingameNameError.classList.remove('show');
+          }
+        }
+
+        if (!isValid) return;
+
+        if (playerType === 'discord' && userAlreadyAssigned(selectedUserId.value)) {
+          if (typeof showNotification === 'function') {
+            showNotification(window.t('warboard_assign.user_already_assigned', 'This user is already assigned to a base on this date'), 4000);
+          } else {
+            alert(window.t('warboard_assign.user_already_assigned', 'This user is already assigned to a base on this date'));
+          }
+          return;
+        }
+
+        if (playerType === 'discord') {
+          try {
+            const cacheBuster = Date.now();
+            const url = `/api/players/${selectedUserId.value}/last-might?guildId=${guildId}&_=${cacheBuster}`;
+            const lastMightData = await apiFetch(url);
+            const lastMight = lastMightData && typeof lastMightData.might !== 'undefined' ? lastMightData.might : null;
+            const newMight = parseFloat(mightInput.value.trim());
+            if (lastMight !== null && newMight < lastMight) {
+              showNotification(window.t('warboard_assign.might_no_decrease', `Might cannot decrease. Last recorded might: ${lastMight}`), 4000);
+              return;
+            }
+          } catch (err) {
+            showNotification(window.t('common.error', 'Failed to check last might: ') + err.message, 4000);
+            return;
+          }
+        }
+
+        let date = dateSelect.value;
+
+        const payload = {
+          guildId,
+          userId: playerType === 'discord' ? selectedUserId.value : null,
+          username: playerType === 'discord' ? userSearch.value : ingameName.value.trim(),
+          base: baseSelect.value,
+          might: mightInput.value.trim(),
+          mention: playerType === 'discord' ? 1 : 0
+        };
+
+        try {
+          await apiFetch(`/api/warboards/${date}/assign`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          if (typeof showNotification === 'function') showNotification(window.t('warboard_assign.assignment_added', 'Assignment added'));
+          await loadDates();
+          dateSelect.value = date;
+          currentDate = date;
+          await loadAssignments(date);
+          userSearch.value = '';
+          selectedUserId.value = '';
+          selectedUserDisplay.textContent = '';
+          ingameName.value = '';
+          mightInput.value = '';
+        } catch (err) {
+          if (typeof showNotification === 'function') {
+            showNotification(window.t('warboard_assign.assignment_failed', 'Assignment failed: ') + err.message, 4000);
+          } else {
+            alert(err.message);
+          }
+        }
+      });
+
+      dateSelect.addEventListener('change', () => {
+        currentDate = dateSelect.value;
+        loadAssignments(currentDate);
+        dateGroup.classList.remove('error');
+        dateError.classList.remove('show');
+      });
+
+      refreshBtn.addEventListener('click', async () => {
+        await loadDates();
+        if (currentDate) {
+          dateSelect.value = currentDate;
+          await loadAssignments(currentDate);
+        } else {
+          await loadAssignments(null);
+        }
+      });
+
+      // Initial load
+      await loadAllMembers();
+      await loadDates();
+      if (dateSelect.options.length > 1) {
+        dateSelect.value = dateSelect.options[1].value;
+        currentDate = dateSelect.value;
+        await loadAssignments(currentDate);
+      } else {
+        renderAssignments();
+        updatePreview();
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      }
+    })();
+  </script>
+</div>

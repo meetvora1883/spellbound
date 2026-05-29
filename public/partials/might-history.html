@@ -1,0 +1,215 @@
+<!-- might-history.html -->
+<div class="might-history-panel">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .might-history-panel {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .control-bar {
+        display: flex;
+        gap: 20px;
+        align-items: flex-end;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+      .user-selector {
+        min-width: 250px;
+      }
+      .user-selector label {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      .user-selector select {
+        width: 100%;
+        background: rgba(0,0,0,.3);
+        border: 1px solid var(--stroke);
+        border-radius: 8px;
+        padding: 10px 12px;
+        color: var(--text);
+        font-size: 0.95rem;
+        outline: none;
+      }
+      .user-selector select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(91,107,255,0.3);
+      }
+      .chart-container {
+        background: var(--panel);
+        border: 1px solid var(--stroke);
+        border-radius: var(--r);
+        padding: 20px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow);
+      }
+      .table-container {
+        background: var(--panel);
+        border: 1px solid var(--stroke);
+        border-radius: var(--r);
+        padding: 20px;
+        box-shadow: var(--shadow);
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,.05);
+      }
+      th {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--muted);
+      }
+    </style>
+  
+    <div class="control-bar">
+      <div class="user-selector">
+        <label data-i18n="might_history.select_player_label"><i class="fas fa-user"></i> Select Player</label>
+        <select id="userSelect">
+          <option value="" data-i18n="might_history.choose_player">-- Choose a player --</option>
+        </select>
+      </div>
+    </div>
+  
+    <div class="chart-container" id="chartContainer" style="display:none;">
+      <canvas id="mightChart"></canvas>
+    </div>
+  
+    <div class="table-container" id="tableContainer" style="display:none;">
+      <h3 style="margin-top:0;" data-i18n="might_history.history_title">History</h3>
+      <table id="historyTable">
+        <thead>
+          <tr>
+            <th data-i18n="might_history.date_column">Date</th>
+            <th data-i18n="might_history.might_column">Might</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="2" class="loading" data-i18n="might_history.no_data">No data</td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <script>
+      (async function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const guildId = urlParams.get('guild');
+        if (!guildId) {
+          alert('No guild selected');
+          return;
+        }
+  
+        // Translation helper
+        const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+  
+        const userSelect = document.getElementById('userSelect');
+        const chartContainer = document.getElementById('chartContainer');
+        const tableContainer = document.getElementById('tableContainer');
+        const historyBody = document.getElementById('historyBody');
+        let mightChart = null;
+  
+        // Load user list (current might)
+        async function loadUsers() {
+          try {
+            const users = await apiFetch(`/api/guilds/${guildId}/might/current`);
+            userSelect.innerHTML = `<option value="">${t('might_history.choose_player', '-- Choose a player --')}</option>`;
+            users.forEach(u => {
+              const opt = document.createElement('option');
+              opt.value = u.user_id;
+              opt.textContent = `${u.username} (${t('might_history.current', 'current')}: ${parseFloat(u.might).toLocaleString()})`;
+              userSelect.appendChild(opt);
+            });
+            // Re-apply translations on the new options (though they aren't data-i18n, it's ok)
+          } catch (err) {
+            console.error('Failed to load users:', err);
+          }
+        }
+  
+        // Load history for selected user
+        async function loadHistory(userId) {
+          if (!userId) {
+            chartContainer.style.display = 'none';
+            tableContainer.style.display = 'none';
+            return;
+          }
+  
+          try {
+            const history = await apiFetch(`/api/guilds/${guildId}/might/history/${userId}?limit=50`);
+  
+            if (history.length === 0) {
+              chartContainer.style.display = 'none';
+              tableContainer.style.display = 'block';
+              historyBody.innerHTML = `<tr><td colspan="2" class="loading" data-i18n="might_history.no_history_yet">${t('might_history.no_history_yet', 'No history yet')}</td></tr>`;
+              if (typeof window.applyTranslations === 'function') window.applyTranslations();
+              return;
+            }
+  
+            // Prepare data for chart
+            const labels = history.map(h => new Date(h.recorded_at).toLocaleDateString());
+            const data = history.map(h => h.might);
+  
+            // Render chart
+            chartContainer.style.display = 'block';
+            const ctx = document.getElementById('mightChart').getContext('2d');
+            if (mightChart) mightChart.destroy();
+            mightChart = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: t('might_history.might_label', 'Might'),
+                  data: data,
+                  borderColor: 'rgb(91, 107, 255)',
+                  backgroundColor: 'rgba(91, 107, 255, 0.1)',
+                  tension: 0.1,
+                  fill: true
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                  y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.1)' } },
+                  x: { grid: { display: false } }
+                }
+              }
+            });
+  
+            // Render table
+            tableContainer.style.display = 'block';
+            let html = '';
+            history.forEach(h => {
+              const date = new Date(h.recorded_at).toLocaleString();
+              html += `<tr><td>${date}</td><td>${parseFloat(h.might).toLocaleString()}</td></tr>`;
+            });
+            historyBody.innerHTML = html;
+  
+          } catch (err) {
+            console.error('Failed to load history:', err);
+          }
+        }
+  
+        userSelect.addEventListener('change', () => {
+          loadHistory(userSelect.value);
+        });
+  
+        await loadUsers();
+        // Apply translations after loading the initial state
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+      })();
+    </script>
+</div>

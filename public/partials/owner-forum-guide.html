@@ -1,0 +1,87 @@
+<div class="panel">
+  <div class="panel-head">
+    <span>📘 Create Forum Guide</span>
+  </div>
+  <div class="panel-body">
+    <div class="field-block">
+      <div class="field-title">Select Forum Channel</div>
+      <div class="field-desc">Choose the forum channel where the guide will be posted.</div>
+      <select id="forumChannelSelect" class="field-input">
+        <option value="">-- Loading channels --</option>
+      </select>
+    </div>
+    <div class="field-block">
+      <div class="field-title">Select Guide Type</div>
+      <div class="field-desc">Choose which guide to create.</div>
+      <select id="guideTypeSelect" class="field-input">
+        <option value="replica">📘 Replica Guide</option>
+        <option value="thunderveil">⚡ Thunderveil Guide</option>
+        <option value="techorb">🔮 Tech Orb Guide</option>
+        <option value="manaflow">💧 Manaflow Guide</option>
+        <option value="atmosphericshield">🛡️ Atmospheric Shield Guide</option>
+        <option value="antimagicfield">🧿 Antimagic Field Guide</option>
+        <option value="forcefield">🌀 Force Field Guide</option>
+          <option value="resonance">🔷 Resonance Guide</option>
+          <option value="soulgem">💀 Soul Gem Guide</option>
+          <option value="artfuldodger">🕶️ Artful Dodger Guide</option>
+  <option value="snowstorm">❄️ Snowstorm Guide</option>
+  <option value="wrathofheavens">🔥 Wrath of Heavens Guide</option>
+          <option value="aegis">🛡️ Aegis Guide</option>
+      </select>
+    </div>
+    <div class="field-block">
+      <button class="btn btn-primary" id="createGuideBtn">🚀 Create Forum Guide</button>
+    </div>
+    <div id="guideStatus" style="margin-top: 15px;"></div>
+  </div>
+</div>
+
+<script>
+  (async function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const guildId = urlParams.get('guild');
+
+    async function loadForumChannels() {
+      const select = document.getElementById('forumChannelSelect');
+      try {
+        const channels = await apiFetch(`/api/forum/forum-channels?guildId=${guildId}`);
+        if (channels.length === 0) {
+          select.innerHTML = '<option value="">No forum channels found</option>';
+          select.disabled = true;
+        } else {
+          select.innerHTML = '<option value="">-- Select a forum channel --</option>' +
+            channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
+          select.disabled = false;
+        }
+      } catch (err) {
+        select.innerHTML = '<option value="">Error loading channels</option>';
+        console.error(err);
+      }
+    }
+
+    document.getElementById('createGuideBtn').addEventListener('click', async () => {
+      const channelId = document.getElementById('forumChannelSelect').value;
+      const guideType = document.getElementById('guideTypeSelect').value;
+      if (!channelId) {
+        alert('Please select a forum channel.');
+        return;
+      }
+      const statusDiv = document.getElementById('guideStatus');
+      statusDiv.innerHTML = '<div class="loading">Creating forum guide... This may take a moment.</div>';
+      document.getElementById('createGuideBtn').disabled = true;
+      try {
+        const result = await apiFetch('/api/forum/create-forum-guide', {
+          method: 'POST',
+          body: JSON.stringify({ guildId, channelId, guideType })
+        });
+        statusDiv.innerHTML = `<div style="color:#22c55e;">✅ Guide created successfully! <a href="${result.threadUrl}" target="_blank">View thread</a></div>`;
+      } catch (err) {
+        statusDiv.innerHTML = `<div class="error-message">❌ Failed: ${err.message}</div>`;
+      } finally {
+        document.getElementById('createGuideBtn').disabled = false;
+      }
+    });
+
+    loadForumChannels();
+  })();
+</script>

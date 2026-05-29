@@ -1,0 +1,662 @@
+<!-- partials/pinmsg-manage.html -->
+<div class="pin-manage-panel">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <style>
+    /* ===== GLOBAL INPUTS ===== */
+    input, textarea, select {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--stroke);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      width: 100%;
+      outline: none;
+      font-family: inherit;
+      margin-bottom: 10px;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(91,107,255,0.3);
+    }
+    textarea { resize: vertical; }
+
+    /* ===== GLOW BUTTON ===== */
+    .glow-btn {
+      position: relative;
+      z-index: 0;
+      border: none;
+      outline: none;
+      color: #fff;
+      background: #111;
+      cursor: pointer;
+      border-radius: 10px;
+      overflow: visible;
+      padding: 10px 24px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .glow-btn::before {
+      content: '';
+      position: absolute;
+      top: -2px; left: -2px;
+      width: calc(100% + 4px);
+      height: calc(100% + 4px);
+      background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+      background-size: 400%;
+      border-radius: inherit;
+      z-index: -1;
+      filter: blur(5px);
+      animation: glowing 20s linear infinite;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .glow-btn:hover::before { opacity: 1; }
+    @keyframes glowing {
+      0% { background-position: 0 0; }
+      50% { background-position: 400% 0; }
+      100% { background-position: 0 0; }
+    }
+
+    /* ===== LAYOUT ===== */
+    .pin-manage-panel { max-width: 1200px; margin: 0 auto; }
+
+    /* Toolbar */
+    .toolbar { display: flex; gap: 12px; margin-bottom: 24px; align-items: center; flex-wrap: wrap; }
+    .channel-select { flex: 1; min-width: 200px; }
+    .search-input { flex: 1; min-width: 150px; }
+    .add-btn {
+      background: var(--accent); color: white; border: none;
+      border-radius: 8px; padding: 10px 24px; font-weight: 600; cursor: pointer;
+    }
+    .add-btn:hover { background: var(--accent2); }
+
+    /* Pin cards */
+    .pin-list { display: flex; flex-direction: column; gap: 12px; }
+    .pin-card {
+      background: var(--panel); border: 1px solid var(--stroke);
+      border-radius: var(--r); padding: 16px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px;
+    }
+    .pin-card-info { flex: 1; min-width: 200px; }
+    .pin-card-channel { font-weight: 600; font-size: 1rem; color: var(--text); }
+    .pin-card-preview { color: var(--muted); font-size: 0.85rem; max-height: 40px; overflow: hidden; }
+    .pin-card-actions { display: flex; gap: 8px; }
+    .btn-sm { padding: 6px 14px; font-size: 0.82rem; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; }
+    .btn-edit { background: var(--accent); color: white; }
+    .btn-edit:hover { background: var(--accent2); }
+    .btn-remove { background: rgba(220,38,38,0.8); color: white; }
+    .btn-remove:hover { background: #c82333; }
+
+    /* Edit view */
+    .edit-view {
+      background: var(--panel); border: 1px solid var(--stroke);
+      border-radius: var(--r); padding: 24px; display: none;
+    }
+    .edit-view.active { display: block; }
+    .edit-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px;
+    }
+    .edit-header h2 { margin: 0; color: var(--text); }
+    .back-btn {
+      background: rgba(255,255,255,0.1); border: 1px solid var(--stroke);
+      border-radius: 8px; padding: 8px 20px; color: var(--text); cursor: pointer;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* Embed wrapper */
+    .embed-editor-wrapper {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.4s;
+      background: rgba(0,0,0,.3); border-radius: 12px;
+      border: 1px solid var(--stroke); margin: 18px 0 10px;
+    }
+    .embed-editor-wrapper.expanded { max-height: 3200px; }
+    .editor-toolbar {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      padding: 12px 16px; background: rgba(0,0,0,.2);
+      border-bottom: 1px solid var(--stroke); align-items: center;
+    }
+    .toolbar-btn {
+      background: rgba(255,255,255,.08); border: 1px solid var(--stroke);
+      border-radius: 4px; padding: 6px 14px; color: var(--text);
+      font-size: 0.85rem; cursor: pointer;
+    }
+    .toolbar-btn:hover { background: rgba(255,255,255,.15); }
+    .embed-editor-inner {
+      display: flex; gap: 24px; padding: 20px; flex-wrap: wrap;
+    }
+    .editor-fields { flex: 1 1 360px; min-width: 280px; }
+    .preview-container {
+      flex: 1 1 320px; background: rgba(0,0,0,.4);
+      border-radius: 10px; padding: 16px; border: 1px solid rgba(255,255,255,.05);
+    }
+
+    /* Field rows */
+    .field-row {
+      background: rgba(255,255,255,.06); border: 1px solid var(--stroke);
+      border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;
+    }
+    .field-header { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+    .field-row textarea {
+      width: 100%; min-height: 55px; margin: 6px 0;
+      background: rgba(0,0,0,.4); border: 1px solid var(--stroke);
+      color: var(--text); border-radius: 6px; padding: 8px; font-family: inherit;
+    }
+    .field-remove {
+      background: none; border: none; color: #ed4245;
+      font-size: 1.2rem; cursor: pointer; font-weight: bold;
+    }
+
+    /* Discord embed preview */
+    .discord-embed { color: #dcddde; font-size: 0.9rem; display: flex; gap: 12px; }
+    .embed-color-strip { width: 4px; border-radius: 2px; flex-shrink: 0; }
+    .embed-content { flex: 1; }
+    .embed-author { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .embed-author img { width: 24px; height: 24px; border-radius: 50%; background: #40444b; }
+    .embed-title { font-weight: 600; color: #00aff4; margin-bottom: 6px; }
+    .embed-description { margin-bottom: 12px; line-height: 1.4; white-space: pre-wrap; }
+    .embed-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    .embed-field { flex: 1 1 200px; }
+    .embed-field.inline { flex: 0 1 auto; min-width: 140px; }
+    .field-name { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; color: #b9bbbe; }
+    .embed-thumbnail { float: right; max-width: 80px; max-height: 80px; margin-left: 12px; border-radius: 6px; }
+    .embed-image img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
+    .embed-footer { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.75rem; color: #b9bbbe; border-top: 1px solid #3b3f45; padding-top: 8px; }
+    .embed-footer img { width: 20px; height: 20px; border-radius: 50%; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 10px 20px; border-radius: 8px; font-weight: 500;
+      font-size: 0.9rem; cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); color: white; border: none; }
+    .btn-primary:hover { background: var(--accent2); }
+    .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid var(--stroke); color: var(--text); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+    .btn-outline { background: transparent; border: 1px solid var(--stroke); color: var(--text); }
+    .btn-outline:hover { background: rgba(255,255,255,0.08); }
+
+    .no-logs, .loading { text-align: center; padding: 30px; color: var(--muted); font-style: italic; }
+  </style>
+
+  <!-- ========== LIST VIEW ========== -->
+  <div id="listView">
+    <div class="toolbar">
+      <select id="pinChannelSelect" class="channel-select" data-i18n-placeholder="common.select_channel">
+        <option value="">-- Select a text channel --</option>
+      </select>
+      <button class="btn btn-primary add-btn glow-btn" id="addPinChannelBtn" data-i18n="common.add">Add Channel</button>
+      <input type="text" id="pinSearch" class="search-input" data-i18n-placeholder="common.search_channels" placeholder="Search channels...">
+    </div>
+    <div class="pin-list" id="pinListContainer">
+      <div class="loading" data-i18n="common.loading">Loading...</div>
+    </div>
+  </div>
+
+  <!-- ========== EDIT VIEW ========== -->
+  <div id="editView" class="edit-view">
+    <div class="edit-header">
+      <h2 data-i18n="pin_editor.edit_pin_message">📌 Edit Pin Message</h2>
+      <button class="btn btn-outline back-btn glow-btn" id="backToListBtn" data-i18n="common.back_to_list">← Back to list</button>
+    </div>
+
+    <div class="field-block">
+      <label data-i18n="pin_editor.text_content">Text Content</label>
+      <textarea id="editContent" rows="3" data-i18n-placeholder="pin_editor.empty_placeholder" placeholder="Leave empty to echo user message or use embed only"></textarea>
+    </div>
+    <button class="btn btn-outline btn-sm glow-btn" id="toggleEmbedBtn" data-i18n="pin_editor.show_embed_builder">Show embed builder</button>
+    <div id="embedEditorContainer" class="embed-editor-wrapper"></div>
+    <div class="preview-container" style="margin-top:20px;">
+      <div id="pinPreview"></div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+      <button class="btn btn-outline glow-btn" id="cancelEditBtn" data-i18n="common.cancel">Cancel</button>
+      <button class="btn btn-primary glow-btn" id="savePinMessageBtn" data-i18n="common.save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  setTimeout(function() {
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const guildId = urlParams.get('guild') || new URLSearchParams(window.parent.location.search).get('guild');
+    if (!guildId) { console.error('No guild selected'); return; }
+
+    let channels = [], pins = [], pickrInstance, embedEditorBuilt = false;
+    let embedState = {}, currentEditChannelId = null;
+
+    // Shortcut for translations
+    const t = (key, fallback) => window.t ? window.t(key, fallback) : fallback;
+
+    // ========== API HELPERS ==========
+    async function loadChannels() {
+      try {
+        channels = await apiFetch(`/api/guilds/${guildId}/channels`);
+        const select = document.getElementById('pinChannelSelect');
+        if (!select) return;
+        select.innerHTML = `<option value="">${t('common.select_channel', '-- Select a text channel --')}</option>`;
+        channels.forEach(c => select.add(new Option(`#${c.name}`, c.id)));
+      } catch(err) { console.error('loadChannels error:', err); }
+    }
+
+    async function loadPinChannels() {
+      try {
+        pins = await apiFetch(`/api/guilds/${guildId}/pin-channels`);
+        renderPinList();
+      } catch(err) { console.error('loadPinChannels error:', err); }
+    }
+
+    function renderPinList(filter = '') {
+      const container = document.getElementById('pinListContainer');
+      if (!container) return;
+      const filtered = pins.filter(p => {
+        if (!filter) return true;
+        const ch = channels.find(c => c.id === p.channel_id);
+        return ch && ch.name.toLowerCase().includes(filter.toLowerCase());
+      });
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="no-logs" data-i18n="pin_editor.no_channels">${t('pin_editor.no_channels', 'No pin channels configured.')}</div>`;
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+        return;
+      }
+      container.innerHTML = filtered.map(p => {
+        const ch = channels.find(c => c.id === p.channel_id);
+        const chName = ch ? `#${ch.name}` : p.channel_id;
+        const preview = p.use_embed ? (p.embed_title || p.embed_description || t('pin_editor.embed', 'Embed')) : (p.content ? p.content.substring(0, 50) : t('pin_editor.echo_user_message', 'Echo user message'));
+        return `
+          <div class="pin-card">
+            <div class="pin-card-info">
+              <div class="pin-card-channel">${chName}</div>
+              <div class="pin-card-preview">${preview}</div>
+            </div>
+            <div class="pin-card-actions">
+              <button class="btn-sm btn-edit glow-btn" data-id="${p.channel_id}" data-i18n="common.edit">${t('common.edit', 'Edit')}</button>
+              <button class="btn-sm btn-remove glow-btn" data-id="${p.channel_id}" data-i18n="common.remove">${t('common.remove', 'Remove')}</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Apply translations to the newly inserted elements
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+
+      // Attach event listeners
+      document.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.onclick = () => openEditor(btn.dataset.id);
+      });
+      document.querySelectorAll('.btn-remove').forEach(btn => {
+        btn.onclick = async () => {
+          const id = btn.dataset.id;
+          const confirmed = await showConfirmModal(
+            t('pin_editor.remove_pin_channel', 'Remove Pin Channel'),
+            t('pin_editor.confirm_remove_channel', 'Stop echoing messages here?')
+          );
+          if (!confirmed) return;
+          await apiFetch(`/api/guilds/${guildId}/pin-channels/${id}`, { method: 'DELETE' });
+          await loadPinChannels();
+          showNotification(t('pin_editor.channel_removed', 'Pin channel removed'));
+        };
+      });
+    }
+
+    // Search & Add
+    const pinSearch = document.getElementById('pinSearch');
+    if (pinSearch) pinSearch.addEventListener('input', e => renderPinList(e.target.value));
+    
+    const addPinBtn = document.getElementById('addPinChannelBtn');
+    if (addPinBtn) {
+      addPinBtn.onclick = async () => {
+        const channelId = document.getElementById('pinChannelSelect').value;
+        if (!channelId) return alert(t('common.select_channel', 'Select a channel'));
+        await apiFetch(`/api/guilds/${guildId}/pin-channels`, { method: 'POST', body: JSON.stringify({ channelId }) });
+        await loadPinChannels();
+      };
+    }
+
+    // ========== VIEW SWITCHING ==========
+    function showEditView() {
+      document.getElementById('listView').style.display = 'none';
+      document.getElementById('editView').classList.add('active');
+    }
+    function showListView() {
+      document.getElementById('editView').classList.remove('active');
+      document.getElementById('listView').style.display = 'block';
+      loadPinChannels();
+    }
+
+    const backBtn = document.getElementById('backToListBtn');
+    if (backBtn) backBtn.onclick = showListView;
+    
+    const cancelBtn = document.getElementById('cancelEditBtn');
+    if (cancelBtn) cancelBtn.onclick = showListView;
+
+    // ========== EMBED EDITOR ==========
+    function initEmbedEditor() {
+      if (embedEditorBuilt) return;
+      const container = document.getElementById('embedEditorContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const toolbar = document.createElement('div');
+      toolbar.className = 'editor-toolbar';
+      toolbar.innerHTML = `
+        <button class="toolbar-btn color-picker-btn glow-btn" data-i18n="pin_editor.color"><i class="fas fa-palette"></i> ${t('pin_editor.color', 'Color')}</button>
+        <button class="toolbar-btn import-embed glow-btn" data-i18n="pin_editor.import"><i class="fas fa-upload"></i> ${t('pin_editor.import', 'Import')}</button>
+        <button class="toolbar-btn export-embed glow-btn" data-i18n="pin_editor.export"><i class="fas fa-download"></i> ${t('pin_editor.export', 'Export')}</button>
+        <button class="toolbar-btn clear-embed glow-btn" data-i18n="pin_editor.clear"><i class="fas fa-trash"></i> ${t('pin_editor.clear', 'Clear')}</button>
+      `;
+      container.appendChild(toolbar);
+
+      const inner = document.createElement('div');
+      inner.className = 'embed-editor-inner';
+      inner.innerHTML = `
+        <div class="editor-fields">
+          <h4 style="color:var(--text);" data-i18n="pin_editor.author">${t('pin_editor.author', 'Author')}</h4>
+          <input type="text" class="embed-author-name" maxlength="256" data-i18n-placeholder="pin_editor.author_name" placeholder="${t('pin_editor.author_name', 'Author name')}">
+          <input type="url" class="embed-author-icon" data-i18n-placeholder="pin_editor.author_icon_url" placeholder="${t('pin_editor.author_icon_url', 'Author icon URL')}">
+          <input type="url" class="embed-author-url" data-i18n-placeholder="pin_editor.author_url" placeholder="${t('pin_editor.author_url', 'Author URL')}">
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="pin_editor.title">${t('pin_editor.title', 'Title')}</h4>
+          <input type="text" class="embed-title-input" maxlength="256" data-i18n-placeholder="pin_editor.title_placeholder" placeholder="${t('pin_editor.title_placeholder', 'Title')}">
+          <input type="url" class="embed-title-url" data-i18n-placeholder="pin_editor.title_url" placeholder="${t('pin_editor.title_url', 'Title URL')}">
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="pin_editor.description">${t('pin_editor.description', 'Description')}</h4>
+          <textarea class="embed-description-input" maxlength="20000" data-i18n-placeholder="pin_editor.description_max" placeholder="${t('pin_editor.description_max', 'Description (max 20000)')}"></textarea>
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="pin_editor.fields">${t('pin_editor.fields', 'Fields')} <span class="text-muted" id="fieldCounter">0/25</span></h4>
+          <div class="fields-container" id="fieldsContainer"></div>
+          <button class="btn btn-outline btn-sm add-field-btn glow-btn" data-i18n="pin_editor.add_field">${t('pin_editor.add_field', '➕ Add field')}</button>
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="pin_editor.images">${t('pin_editor.images', 'Images')}</h4>
+          <input type="url" class="embed-image" data-i18n-placeholder="pin_editor.image_url" placeholder="${t('pin_editor.image_url', 'Image URL')}">
+          <input type="url" class="embed-thumbnail-url" data-i18n-placeholder="pin_editor.thumbnail_url" placeholder="${t('pin_editor.thumbnail_url', 'Thumbnail URL')}">
+          <h4 style="color:var(--text); margin-top:16px;" data-i18n="pin_editor.footer">${t('pin_editor.footer', 'Footer')}</h4>
+          <input type="text" class="embed-footer-text" maxlength="2048" data-i18n-placeholder="pin_editor.footer_text_placeholder" placeholder="${t('pin_editor.footer_text_placeholder', 'Footer text')}">
+          <input type="url" class="embed-footer-icon" data-i18n-placeholder="pin_editor.footer_icon_url" placeholder="${t('pin_editor.footer_icon_url', 'Footer icon URL')}">
+          <div style="margin:16px 0;">
+            <button class="timestamp-btn" id="timestampBtn" data-i18n="pin_editor.set_timestamp"><i class="far fa-calendar-alt"></i> ${t('pin_editor.set_timestamp', 'Set timestamp')}</button>
+            <span class="text-muted" id="timestampDisplay" data-i18n="pin_editor.none">${t('pin_editor.none', 'none')}</span>
+            <input type="datetime-local" id="timestampPicker" style="display:none;">
+          </div>
+        </div>
+        <div class="preview-container">
+          <div id="embedPreview"></div>
+        </div>
+      `;
+      container.appendChild(inner);
+
+      // Apply translations to everything we just injected
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+
+      // Color picker
+      const colorBtn = toolbar.querySelector('.color-picker-btn');
+      if (typeof Pickr !== 'undefined') {
+        pickrInstance = Pickr.create({
+          el: colorBtn, theme: 'nano', default: embedState.color || '#5865F2',
+          useAsButton: true,
+          components: { preview: true, opacity: true, hue: true, interaction: { hex: true, input: true, save: true } }
+        });
+        pickrInstance.on('save', (color) => {
+          if (!color) return;
+          embedState.color = color.toHEXA().toString();
+          updatePreview();
+          pickrInstance.hide();
+        });
+      }
+
+      // Event listeners
+      inner.querySelectorAll('.editor-fields input, .editor-fields textarea').forEach(el => {
+        el.addEventListener('input', () => updatePreview());
+      });
+      inner.querySelector('.add-field-btn').addEventListener('click', addField);
+      
+      const tsBtn = document.getElementById('timestampBtn');
+      if (tsBtn) tsBtn.onclick = () => document.getElementById('timestampPicker').showPicker();
+      
+      const tsPicker = document.getElementById('timestampPicker');
+      if (tsPicker) tsPicker.addEventListener('change', (e) => {
+        embedState.timestamp = e.target.value ? new Date(e.target.value).toISOString() : null;
+        document.getElementById('timestampDisplay').textContent = e.target.value ? new Date(e.target.value).toLocaleString() : t('pin_editor.none', 'none');
+        updatePreview();
+      });
+      
+      toolbar.querySelector('.clear-embed').onclick = clearEmbed;
+      toolbar.querySelector('.import-embed').onclick = importEmbed;
+      toolbar.querySelector('.export-embed').onclick = exportEmbed;
+
+      embedEditorBuilt = true;
+    }
+
+    function resetEmbedFields() {
+      embedState = {
+        authorName: '', authorIcon: '', authorUrl: '',
+        title: '', titleUrl: '', description: '',
+        fields: [], image: '', thumbnail: '',
+        footerText: '', footerIcon: '', timestamp: null, color: '#5865F2'
+      };
+    }
+
+    function populateEmbedFields(state) {
+      const left = document.querySelector('#embedEditorContainer .editor-fields');
+      if (!left) return;
+      left.querySelector('.embed-author-name').value = state.authorName || '';
+      left.querySelector('.embed-author-icon').value = state.authorIcon || '';
+      left.querySelector('.embed-author-url').value = state.authorUrl || '';
+      left.querySelector('.embed-title-input').value = state.title || '';
+      left.querySelector('.embed-title-url').value = state.titleUrl || '';
+      left.querySelector('.embed-description-input').value = state.description || '';
+      left.querySelector('.embed-image').value = state.image || '';
+      left.querySelector('.embed-thumbnail-url').value = state.thumbnail || '';
+      left.querySelector('.embed-footer-text').value = state.footerText || '';
+      left.querySelector('.embed-footer-icon').value = state.footerIcon || '';
+      const tsDisplay = document.getElementById('timestampDisplay');
+      if (tsDisplay) tsDisplay.textContent = state.timestamp ? new Date(state.timestamp).toLocaleString() : t('pin_editor.none', 'none');
+      const tsPicker = document.getElementById('timestampPicker');
+      if (tsPicker) tsPicker.value = state.timestamp ? new Date(state.timestamp).toISOString().slice(0,16) : '';
+      if (pickrInstance) pickrInstance.setColor(state.color);
+      renderFields();
+      updatePreview();
+    }
+
+    function renderFields() {
+      const container = document.getElementById('fieldsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      embedState.fields.forEach((field, idx) => {
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        row.innerHTML = `
+          <div class="field-header">
+            <input type="text" class="field-name-input" data-i18n-placeholder="pin_editor.field_name" placeholder="${t('pin_editor.field_name', 'Field name')}" value="${(field.name||'').replace(/"/g,'&quot;')}">
+            <label style="display:flex;align-items:center;gap:4px;color:var(--muted);">
+              <input type="checkbox" class="field-inline-checkbox" ${field.inline?'checked':''}> inline
+            </label>
+            <button class="field-remove">x</button>
+          </div>
+          <textarea class="field-value-input" maxlength="1024" data-i18n-placeholder="pin_editor.field_value" placeholder="${t('pin_editor.field_value', 'Field value')}">${(field.value||'').replace(/"/g,'&quot;')}</textarea>
+        `;
+        container.appendChild(row);
+        
+        const nameInput = row.querySelector('.field-name-input');
+        const valueInput = row.querySelector('.field-value-input');
+        const inlineCheck = row.querySelector('.field-inline-checkbox');
+        
+        nameInput.oninput = () => { embedState.fields[idx].name = nameInput.value; updatePreview(); };
+        valueInput.oninput = () => { embedState.fields[idx].value = valueInput.value; updatePreview(); };
+        inlineCheck.onchange = () => { embedState.fields[idx].inline = inlineCheck.checked; updatePreview(); };
+        row.querySelector('.field-remove').onclick = () => { embedState.fields.splice(idx,1); renderFields(); updatePreview(); };
+      });
+      const counter = document.getElementById('fieldCounter');
+      if (counter) counter.innerText = `${embedState.fields.length}/25`;
+      // Apply translations to any newly added field placeholders
+      if (typeof window.applyTranslations === 'function') window.applyTranslations();
+    }
+
+    function addField() {
+      if (embedState.fields.length >= 25) return;
+      embedState.fields.push({ name:'', value:'', inline:false });
+      renderFields();
+      updatePreview();
+    }
+
+    function clearEmbed() { resetEmbedFields(); populateEmbedFields(embedState); }
+
+    function importEmbed() {
+      const input = document.createElement('input');
+      input.type='file';
+      input.accept='.json';
+      input.onchange = e => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try { Object.assign(embedState, JSON.parse(e.target.result)); populateEmbedFields(embedState); }
+          catch { showNotification(t('pin_editor.invalid_json', 'Invalid JSON')); }
+        };
+        reader.readAsText(e.target.files[0]);
+      };
+      input.click();
+    }
+
+    function exportEmbed() {
+      const blob = new Blob([JSON.stringify(embedState)], { type:'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'embed.json';
+      a.click();
+    }
+
+    function updatePreview() {
+      const previewEl = document.getElementById('embedPreview');
+      if (!previewEl) return;
+      const left = document.querySelector('#embedEditorContainer .editor-fields');
+      if (!left) return;
+      
+      embedState.authorName = left.querySelector('.embed-author-name')?.value || '';
+      embedState.authorIcon = left.querySelector('.embed-author-icon')?.value || '';
+      embedState.authorUrl = left.querySelector('.embed-author-url')?.value || '';
+      embedState.title = left.querySelector('.embed-title-input')?.value || '';
+      embedState.titleUrl = left.querySelector('.embed-title-url')?.value || '';
+      embedState.description = left.querySelector('.embed-description-input')?.value || '';
+      embedState.image = left.querySelector('.embed-image')?.value || '';
+      embedState.thumbnail = left.querySelector('.embed-thumbnail-url')?.value || '';
+      embedState.footerText = left.querySelector('.embed-footer-text')?.value || '';
+      embedState.footerIcon = left.querySelector('.embed-footer-icon')?.value || '';
+
+      let html = `<div class="discord-embed"><div class="embed-color-strip" style="background:${embedState.color};"></div><div class="embed-content">`;
+      if (embedState.authorName) {
+        html += `<div class="embed-author">`;
+        if (embedState.authorIcon) html += `<img src="${embedState.authorIcon}" onerror="this.style.display='none'">`;
+        html += `<span>${embedState.authorName}</span></div>`;
+      }
+      if (embedState.title) {
+        if (embedState.titleUrl) html += `<a href="${embedState.titleUrl}" style="text-decoration:none;">`;
+        html += `<div class="embed-title">${embedState.title}</div>`;
+        if (embedState.titleUrl) html += `</a>`;
+      }
+      if (embedState.thumbnail) html += `<img src="${embedState.thumbnail}" class="embed-thumbnail" onerror="this.style.display='none'">`;
+      if (embedState.description) html += `<div class="embed-description">${embedState.description.replace(/\n/g,'<br>')}</div>`;
+      if (embedState.fields.length) {
+        html += `<div class="embed-fields">`;
+        embedState.fields.forEach(f => {
+          html += `<div class="embed-field ${f.inline?'inline':''}"><span class="field-name">${f.name||' '}</span><span class="field-value">${f.value||' '}</span></div>`;
+        });
+        html += `</div><div style="clear:both;"></div>`;
+      }
+      if (embedState.image) html += `<div class="embed-image"><img src="${embedState.image}" onerror="this.style.display='none'"></div>`;
+      if (embedState.footerText || embedState.footerIcon || embedState.timestamp) {
+        html += `<div class="embed-footer">`;
+        if (embedState.footerIcon) html += `<img src="${embedState.footerIcon}" onerror="this.style.display='none'">`;
+        html += `<span>${embedState.footerText||''}</span>`;
+        if (embedState.timestamp) {
+          html += `<span class="embed-timestamp"> - ${new Date(embedState.timestamp).toLocaleDateString()} ${new Date(embedState.timestamp).toLocaleTimeString()}</span>`;
+        }
+        html += `</div>`;
+      }
+      html += `</div></div>`;
+      previewEl.innerHTML = html;
+    }
+
+    async function openEditor(channelId) {
+      currentEditChannelId = channelId;
+      try {
+        const pin = await apiFetch(`/api/guilds/${guildId}/pin-channels/${channelId}`);
+        if (!pin) return;
+        document.getElementById('editContent').value = pin.content || '';
+        resetEmbedFields();
+        embedState = {
+          authorName: pin.embed_author||'', authorIcon: pin.embed_author_icon||'', authorUrl: pin.embed_author_url||'',
+          title: pin.embed_title||'', titleUrl: pin.embed_title_url||'', description: pin.embed_description||'',
+          fields: pin.embed_fields ? JSON.parse(pin.embed_fields) : [],
+          image: pin.embed_image||'', thumbnail: pin.embed_thumbnail||'',
+          footerText: pin.embed_footer||'', footerIcon: pin.embed_footer_icon||'',
+          timestamp: pin.embed_timestamp||null, color: pin.embed_color||'#5865F2'
+        };
+        showEditView();
+        if (!embedEditorBuilt) initEmbedEditor();
+        const wrapper = document.getElementById('embedEditorContainer');
+        const toggleBtn = document.getElementById('toggleEmbedBtn');
+        if (pin.use_embed) {
+          wrapper.classList.add('expanded');
+          if (toggleBtn) toggleBtn.innerHTML = t('pin_editor.hide_embed_builder', 'Hide embed builder');
+        } else {
+          wrapper.classList.remove('expanded');
+          if (toggleBtn) toggleBtn.innerHTML = t('pin_editor.show_embed_builder', 'Show embed builder');
+        }
+        populateEmbedFields(embedState);
+      } catch(err) { console.error('openEditor error:', err); }
+    }
+
+    // Toggle embed builder
+    const toggleBtn = document.getElementById('toggleEmbedBtn');
+    if (toggleBtn) {
+      toggleBtn.onclick = () => {
+        const wrapper = document.getElementById('embedEditorContainer');
+        wrapper.classList.toggle('expanded');
+        toggleBtn.innerHTML = wrapper.classList.contains('expanded') ? t('pin_editor.hide_embed_builder', 'Hide embed builder') : t('pin_editor.show_embed_builder', 'Show embed builder');
+      };
+    }
+
+    // Save button
+    const saveBtn = document.getElementById('savePinMessageBtn');
+    if (saveBtn) {
+      saveBtn.onclick = async () => {
+        const content = document.getElementById('editContent').value.trim() || null;
+        const useEmbed = document.getElementById('embedEditorContainer').classList.contains('expanded') ? 1 : 0;
+        const data = {
+          content, use_embed: useEmbed,
+          embed_title: embedState.title||null, embed_description: embedState.description||null,
+          embed_color: embedState.color||null, embed_footer: embedState.footerText||null,
+          embed_thumbnail: embedState.thumbnail||null, embed_image: embedState.image||null,
+          embed_author: embedState.authorName||null, embed_author_icon: embedState.authorIcon||null,
+          embed_author_url: embedState.authorUrl||null, embed_title_url: embedState.titleUrl||null,
+          embed_footer_icon: embedState.footerIcon||null, embed_timestamp: embedState.timestamp||null,
+          embed_fields: JSON.stringify(embedState.fields)
+        };
+        await apiFetch(`/api/guilds/${guildId}/pin-channels/${currentEditChannelId}/message`, {
+          method: 'PUT', body: JSON.stringify(data)
+        });
+        showNotification(t('pin_editor.message_updated', 'Pin message updated'));
+        showListView();
+      };
+    }
+
+    // Initialize
+    (async () => {
+      await loadChannels();
+      await loadPinChannels();
+    })();
+
+    if (typeof socket !== 'undefined') {
+      socket.on('pinChannelsUpdated', (data) => {
+        if (data.guildId === guildId) loadPinChannels();
+      });
+    }
+    
+  }, 100);
+})();
+</script>

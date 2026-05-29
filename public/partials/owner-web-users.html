@@ -1,0 +1,167 @@
+<section class="panel">
+  <div class="panel-head">
+    <span>👥 Web Users</span>
+    <span class="badge">Manage Access</span>
+  </div>
+  <div class="panel-body">
+    <h3>Add New Web User</h3>
+    <div class="field-row" style="margin-bottom: 20px;">
+      <input type="text" id="newUsername" class="field-input" placeholder="Username" required>
+      <input type="password" id="newPassword" class="field-input" placeholder="Password" required>
+      <input type="text" id="newDiscordId" class="field-input" placeholder="Discord ID (optional)">
+      <button class="btn btn-primary glow-btn" id="addWebUserBtn">Add User</button>
+    </div>
+
+    <h3>Existing Web Users</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Discord ID</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="webUsersBody">
+          <tr><td colspan="5" class="loading">Loading users...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Banned Discord IDs</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Discord ID</th>
+            <th>Banned At</th>
+            <th>Reason</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bannedDiscordBody">
+          <tr><td colspan="4" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+  (async function() {
+    const tbody = document.getElementById('webUsersBody');
+    const bannedTbody = document.getElementById('bannedDiscordBody');
+    const addBtn = document.getElementById('addWebUserBtn');
+
+    async function loadUsers() {
+      tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading...</td></tr>';
+      const users = await apiFetch(`/api/admin/web-users?_=${Date.now()}`);
+      tbody.innerHTML = '';
+      users.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${u.id}</td>
+          <td>${u.username}</td>
+          <td>${u.discord_id || '-'}</td>
+          <td><span class="status-${u.status || 'active'}">${u.status || 'active'}</span></td>
+          <td>
+            <button class="btn btn-sm btn-warning resetBtn" data-id="${u.id}">Reset Pass</button>
+            ${u.status !== 'locked'
+              ? `<button class="btn btn-sm btn-danger lockBtn" data-id="${u.id}">🔒 Lock</button>`
+              : `<button class="btn btn-sm btn-success unlockBtn" data-id="${u.id}">🔓 Unlock</button>`
+            }
+            ${u.discord_id ? `<button class="btn btn-sm btn-danger banDiscordBtn" data-discord-id="${u.discord_id}">⛔ Ban Discord</button>` : ''}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      attachEvents();
+    }
+
+    async function loadBannedDiscords() {
+      bannedTbody.innerHTML = '<tr><td colspan="4" class="loading">Loading...</td></tr>';
+      const list = await apiFetch('/api/admin/banned-discords');
+      bannedTbody.innerHTML = '';
+      if (list.length === 0) {
+        bannedTbody.innerHTML = '<tr><td colspan="4" class="no-logs">No banned Discord IDs</td></tr>';
+        return;
+      }
+      list.forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${b.discord_id}</td>
+          <td>${new Date(b.banned_at).toLocaleString()}</td>
+          <td>${b.reason || ''}</td>
+          <td>
+            <button class="btn btn-sm btn-success unbanDiscordBtn" data-discord-id="${b.discord_id}">✅ Unban</button>
+          </td>
+        `;
+        bannedTbody.appendChild(tr);
+      });
+      document.querySelectorAll('.unbanDiscordBtn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.discordId;
+          await apiFetch(`/api/admin/ban-discord/${id}`, { method: 'DELETE' });
+          loadBannedDiscords();
+        });
+      });
+    }
+
+    function attachEvents() {
+      // Reset password
+      document.querySelectorAll('.resetBtn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const newPass = prompt('Enter new password:');
+          if (!newPass) return;
+          await apiFetch(`/api/admin/web-users/${id}`, { method: 'PUT', body: JSON.stringify({ password: newPass }) });
+          alert('Password updated');
+        });
+      });
+
+      // Lock / Unlock
+      document.querySelectorAll('.lockBtn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          await apiFetch(`/api/admin/web-users/${id}/lock`, { method: 'PUT' });
+          loadUsers();
+        });
+      });
+      document.querySelectorAll('.unlockBtn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          await apiFetch(`/api/admin/web-users/${id}/unlock`, { method: 'PUT' });
+          loadUsers();
+        });
+      });
+
+      // Ban Discord
+      document.querySelectorAll('.banDiscordBtn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const discordId = btn.dataset.discordId;
+          const reason = prompt('Reason for ban (optional):');
+          await apiFetch(`/api/admin/ban-discord/${discordId}`, { method: 'POST', body: JSON.stringify({ reason }) });
+          loadUsers();
+          loadBannedDiscords();
+        });
+      });
+    }
+
+    addBtn.addEventListener('click', async () => {
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value;
+      const discordId = document.getElementById('newDiscordId').value.trim() || null;
+      if (!username || !password) return alert('Username and password required');
+      await apiFetch('/api/admin/web-users', { method: 'POST', body: JSON.stringify({ username, password, discordId }) });
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('newDiscordId').value = '';
+      loadUsers();
+    });
+
+    loadUsers();
+    loadBannedDiscords();
+  })();
+</script>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bot Status</title>
+  <style>
+    body { background: #0b0f19; color: #e0e6ed; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 2rem; text-align: center; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+    .stat { font-size: 2rem; font-weight: bold; color: #5b6bff; }
+    .label { font-size: 0.9rem; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Warboard Bot</h1>
+    <div class="stat" id="guilds">-</div><div class="label">Guilds</div>
+    <div class="stat" id="uptime">-</div><div class="label">Uptime</div>
+    <div class="stat" id="ping">-</div><div class="label">Latency (ms)</div>
+  </div>
+  <script>
+    async function fetchStatus() {
+      const res = await fetch('/api/bot/info');
+      const bot = await res.json();
+      const now = Date.now();
+      const uptime = process.uptime ? Math.floor(process.uptime()) : 0;
+      document.getElementById('guilds').textContent = bot.guilds || 'N/A';
+      document.getElementById('uptime').textContent = uptime + 's';
+      document.getElementById('ping').textContent = '...';
+    }
+    fetchStatus();
+    setInterval(fetchStatus, 30000);
+  </script>
+</body>
+</html>
